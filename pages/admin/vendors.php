@@ -59,8 +59,10 @@ switch ($filter) {
 // Get vendors
 $vendors = $database->fetchAll("
     SELECT u.*, v.shop_name, v.shop_description, v.phone, v.address,
-           (SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id) as total_products,
-           (SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id AND p.status = 'active') as active_products
+           v.business_license, v.business_license_file, v.citizenship_file, v.pan_card_file,
+           v.other_documents, v.application_date, v.is_verified,
+           COALESCE((SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id), 0) as total_products,
+           COALESCE((SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id AND p.status = 'active'), 0) as active_products
     FROM users u
     LEFT JOIN vendors v ON u.id = v.user_id
     {$whereClause}
@@ -213,13 +215,34 @@ $counts = [
                                             </td>
                                             <td class="px-6 py-4">
                                                 <div>
-                                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'N/A'); ?></div>
+                                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'No shop name'); ?></div>
                                                     <?php if ($vendor['shop_description']): ?>
                                                         <div class="text-sm text-gray-500"><?php echo htmlspecialchars(substr($vendor['shop_description'], 0, 50) . '...'); ?></div>
                                                     <?php endif; ?>
                                                     <?php if ($vendor['address']): ?>
-                                                        <div class="text-xs text-gray-400"><?php echo htmlspecialchars($vendor['address']); ?></div>
+                                                        <div class="text-xs text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i><?php echo htmlspecialchars($vendor['address']); ?></div>
                                                     <?php endif; ?>
+                                                    <?php if ($vendor['business_license']): ?>
+                                                        <div class="text-xs text-blue-600"><i class="fas fa-certificate mr-1"></i>License: <?php echo htmlspecialchars($vendor['business_license']); ?></div>
+                                                    <?php endif; ?>
+                                                    <!-- Documents -->
+                                                    <div class="mt-2 flex space-x-2">
+                                                        <?php if ($vendor['citizenship_file']): ?>
+                                                            <a href="<?php echo SITE_URL . $vendor['citizenship_file']; ?>" target="_blank" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                                <i class="fas fa-id-card mr-1"></i>Citizenship
+                                                            </a>
+                                                        <?php endif; ?>
+                                                        <?php if ($vendor['business_license_file']): ?>
+                                                            <a href="<?php echo SITE_URL . $vendor['business_license_file']; ?>" target="_blank" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                                <i class="fas fa-certificate mr-1"></i>License
+                                                            </a>
+                                                        <?php endif; ?>
+                                                        <?php if ($vendor['pan_card_file']): ?>
+                                                            <a href="<?php echo SITE_URL . $vendor['pan_card_file']; ?>" target="_blank" class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                                                <i class="fas fa-credit-card mr-1"></i>PAN
+                                                            </a>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

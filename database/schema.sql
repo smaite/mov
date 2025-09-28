@@ -27,14 +27,22 @@ CREATE TABLE vendors (
     user_id INT UNIQUE NOT NULL,
     shop_name VARCHAR(100) NOT NULL,
     shop_description TEXT,
+    phone VARCHAR(20),
+    address TEXT,
     shop_logo VARCHAR(255),
     shop_banner VARCHAR(255),
     business_license VARCHAR(100),
+    business_license_file VARCHAR(255),
+    citizenship_file VARCHAR(255),
+    pan_card_file VARCHAR(255),
+    other_documents VARCHAR(500),
     commission_rate DECIMAL(5,2) DEFAULT 10.00,
     total_sales DECIMAL(12,2) DEFAULT 0.00,
     rating DECIMAL(3,2) DEFAULT 0.00,
     is_verified BOOLEAN DEFAULT FALSE,
+    application_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

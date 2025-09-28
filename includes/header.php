@@ -185,8 +185,8 @@
                                     <p class="text-sm text-gray-500"><?php echo $_SESSION['email']; ?></p>
                                 </div>
                                 <div class="py-2">
-                                    <a href="?page=profile" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                        <i class="fas fa-user mr-3 text-gray-400"></i>My Profile
+                                    <a href="?page=customer" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-user mr-3 text-gray-400"></i>My Account
                                     </a>
                                     <a href="?page=orders" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                         <i class="fas fa-shopping-bag mr-3 text-gray-400"></i>My Orders

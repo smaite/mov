@@ -1,20 +1,37 @@
 -- Demo data for Sasto Hub E-commerce Platform
 -- This file contains sample data for testing the platform
+-- IMPORTANT: All demo users have password: 'password'
 
 USE sasto_hub;
 
--- Insert demo users (password is 'password' for all)
+-- Clear existing data (optional, uncomment if needed)
+-- SET FOREIGN_KEY_CHECKS = 0;
+-- TRUNCATE TABLE order_items;
+-- TRUNCATE TABLE orders;
+-- TRUNCATE TABLE cart;
+-- TRUNCATE TABLE wishlists;
+-- TRUNCATE TABLE product_reviews;
+-- TRUNCATE TABLE product_images;
+-- TRUNCATE TABLE products;
+-- TRUNCATE TABLE vendors;
+-- TRUNCATE TABLE users;
+-- TRUNCATE TABLE categories;
+-- SET FOREIGN_KEY_CHECKS = 1;
+
+-- Insert demo users (password is 'password' for all accounts)
 INSERT INTO users (username, email, password, first_name, last_name, phone, address, city, country, user_type, status) VALUES
 ('customer1', 'customer@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John', 'Doe', '+977-9841234567', 'Thamel, Kathmandu', 'Kathmandu', 'Nepal', 'customer', 'active'),
 ('vendor1', 'vendor@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Ram', 'Sharma', '+977-9851234567', 'Bhaktapur', 'Bhaktapur', 'Nepal', 'vendor', 'active'),
 ('vendor2', 'vendor2@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Sita', 'Patel', '+977-9861234567', 'Lalitpur', 'Lalitpur', 'Nepal', 'vendor', 'active'),
 ('customer2', 'jane@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Jane', 'Smith', '+977-9871234567', 'Pokhara', 'Pokhara', 'Nepal', 'customer', 'active'),
-('admin', 'admin@sastohub.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', '+977-9800000000', 'Kathmandu', 'Kathmandu', 'Nepal', 'admin', 'active');
+('admin', 'admin@sastohub.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', '+977-9800000000', 'Kathmandu', 'Kathmandu', 'Nepal', 'admin', 'active'),
+('vendor3', 'newvendor@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Maya', 'Gurung', '+977-9876543210', 'Chitwan', 'Chitwan', 'Nepal', 'vendor', 'pending');
 
--- Insert vendor details
-INSERT INTO vendors (user_id, shop_name, shop_description, commission_rate, is_verified) VALUES
-(2, 'TechHub Nepal', 'Leading electronics and gadgets store in Nepal', 8.00, TRUE),
-(3, 'Fashion Forward', 'Trendy clothes and accessories for all ages', 10.00, TRUE);
+-- Insert vendor details (compatible with new schema)
+INSERT INTO vendors (user_id, shop_name, shop_description, phone, address, business_license, business_license_file, citizenship_file, pan_card_file, other_documents, commission_rate, is_verified, application_date) VALUES
+(2, 'TechHub Nepal', 'Leading electronics and gadgets store in Nepal. We specialize in laptops, smartphones, gaming accessories and tech gadgets.', '+977-9851234567', 'Ward No. 5, Bhaktapur Durbar Square, Bhaktapur', 'BL-2023-001', NULL, NULL, NULL, NULL, 8.00, TRUE, '2024-01-15 10:30:00'),
+(3, 'Fashion Forward', 'Trendy clothes and accessories for all ages. From traditional wear to modern fashion, we have it all for men, women and children.', '+977-9861234567', 'Jawalakhel, Lalitpur-10', 'BL-2023-002', NULL, NULL, NULL, NULL, 10.00, TRUE, '2024-01-20 14:45:00'),
+(6, 'Mountain Crafts', 'Authentic Nepali handicrafts and traditional items. Supporting local artisans and preserving our cultural heritage.', '+977-9876543210', 'Sauraha, Chitwan', 'BL-2024-003', NULL, NULL, NULL, '[]', 12.00, FALSE, NOW());
 
 -- Insert more categories
 INSERT INTO categories (name, slug, description, sort_order) VALUES
