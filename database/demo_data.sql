@@ -1,175 +1,191 @@
 -- Demo data for Sasto Hub E-commerce Platform
 -- This file contains sample data for testing the platform
 -- IMPORTANT: All demo users have password: 'password'
+-- Run this file AFTER schema.sql
 
 USE sasto_hub;
 
--- Clear existing data (optional, uncomment if needed)
--- SET FOREIGN_KEY_CHECKS = 0;
--- TRUNCATE TABLE order_items;
--- TRUNCATE TABLE orders;
--- TRUNCATE TABLE cart;
--- TRUNCATE TABLE wishlists;
--- TRUNCATE TABLE product_reviews;
--- TRUNCATE TABLE product_images;
--- TRUNCATE TABLE products;
--- TRUNCATE TABLE vendors;
--- TRUNCATE TABLE users;
--- TRUNCATE TABLE categories;
--- SET FOREIGN_KEY_CHECKS = 1;
+-- Clear existing data to prevent foreign key constraint issues
+SET FOREIGN_KEY_CHECKS = 0;
 
--- Insert demo users (password is 'password' for all accounts)
+-- Delete in correct order (child tables first, then parent tables)
+DELETE FROM order_items;
+DELETE FROM orders;
+DELETE FROM cart;
+DELETE FROM wishlist;
+DELETE FROM reviews;
+DELETE FROM product_images;
+DELETE FROM products;
+DELETE FROM vendors;
+DELETE FROM users;
+DELETE FROM categories;
+DELETE FROM settings;
+DELETE FROM hero_sections;
+
+-- Reset auto-increment counters
+ALTER TABLE order_items AUTO_INCREMENT = 1;
+ALTER TABLE orders AUTO_INCREMENT = 1;
+ALTER TABLE cart AUTO_INCREMENT = 1;
+ALTER TABLE wishlist AUTO_INCREMENT = 1;
+ALTER TABLE reviews AUTO_INCREMENT = 1;
+ALTER TABLE product_images AUTO_INCREMENT = 1;
+ALTER TABLE products AUTO_INCREMENT = 1;
+ALTER TABLE vendors AUTO_INCREMENT = 1;
+ALTER TABLE users AUTO_INCREMENT = 1;
+ALTER TABLE categories AUTO_INCREMENT = 1;
+ALTER TABLE settings AUTO_INCREMENT = 1;
+ALTER TABLE hero_sections AUTO_INCREMENT = 1;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Insert demo users first (password is 'password' for all accounts)
 INSERT INTO users (username, email, password, first_name, last_name, phone, address, city, country, user_type, status) VALUES
+('admin', 'admin@sastohub.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', '+977-9800000000', 'Kathmandu', 'Kathmandu', 'Nepal', 'admin', 'active'),
 ('customer1', 'customer@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John', 'Doe', '+977-9841234567', 'Thamel, Kathmandu', 'Kathmandu', 'Nepal', 'customer', 'active'),
 ('vendor1', 'vendor@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Ram', 'Sharma', '+977-9851234567', 'Bhaktapur', 'Bhaktapur', 'Nepal', 'vendor', 'active'),
 ('vendor2', 'vendor2@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Sita', 'Patel', '+977-9861234567', 'Lalitpur', 'Lalitpur', 'Nepal', 'vendor', 'active'),
 ('customer2', 'jane@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Jane', 'Smith', '+977-9871234567', 'Pokhara', 'Pokhara', 'Nepal', 'customer', 'active'),
-('admin', 'admin@sastohub.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', '+977-9800000000', 'Kathmandu', 'Kathmandu', 'Nepal', 'admin', 'active'),
 ('vendor3', 'newvendor@test.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Maya', 'Gurung', '+977-9876543210', 'Chitwan', 'Chitwan', 'Nepal', 'vendor', 'pending');
 
--- Insert vendor details (compatible with new schema)
+-- Insert categories (compatible with schema)
+INSERT INTO categories (name, slug, description, image, parent_id, sort_order, is_active) VALUES
+('Electronics', 'electronics', 'Electronic devices and gadgets', NULL, NULL, 1, TRUE),
+('Fashion', 'fashion', 'Clothing and fashion accessories', NULL, NULL, 2, TRUE),
+('Home & Living', 'home-living', 'Furniture and home decoration items', NULL, NULL, 3, TRUE),
+('Sports & Fitness', 'sports-fitness', 'Sports equipment and fitness gear', NULL, NULL, 4, TRUE),
+('Books & Media', 'books-media', 'Books, movies, music and educational content', NULL, NULL, 5, TRUE),
+('Health & Beauty', 'health-beauty', 'Healthcare and beauty products', NULL, NULL, 6, TRUE);
+
+-- Insert sub-categories
+INSERT INTO categories (name, slug, description, image, parent_id, sort_order, is_active) VALUES
+('Smartphones', 'smartphones', 'Latest smartphones and mobile devices', NULL, 1, 1, TRUE),
+('Laptops', 'laptops', 'Laptops and computers for work and gaming', NULL, 1, 2, TRUE),
+('Audio & Headphones', 'audio-headphones', 'Speakers, headphones and audio accessories', NULL, 1, 3, TRUE),
+('Men Fashion', 'men-fashion', 'Clothing and accessories for men', NULL, 2, 1, TRUE),
+('Women Fashion', 'women-fashion', 'Clothing and accessories for women', NULL, 2, 2, TRUE),
+('Kids Fashion', 'kids-fashion', 'Clothing and accessories for children', NULL, 2, 3, TRUE);
+
+-- Insert vendor details AFTER users (using correct user_ids)
+-- user_id 3 = vendor1, user_id 4 = vendor2, user_id 6 = vendor3
 INSERT INTO vendors (user_id, shop_name, shop_description, phone, address, business_license, business_license_file, citizenship_file, pan_card_file, other_documents, commission_rate, is_verified, application_date) VALUES
-(2, 'TechHub Nepal', 'Leading electronics and gadgets store in Nepal. We specialize in laptops, smartphones, gaming accessories and tech gadgets.', '+977-9851234567', 'Ward No. 5, Bhaktapur Durbar Square, Bhaktapur', 'BL-2023-001', NULL, NULL, NULL, NULL, 8.00, TRUE, '2024-01-15 10:30:00'),
-(3, 'Fashion Forward', 'Trendy clothes and accessories for all ages. From traditional wear to modern fashion, we have it all for men, women and children.', '+977-9861234567', 'Jawalakhel, Lalitpur-10', 'BL-2023-002', NULL, NULL, NULL, NULL, 10.00, TRUE, '2024-01-20 14:45:00'),
+(3, 'TechHub Nepal', 'Leading electronics and gadgets store in Nepal. We specialize in laptops, smartphones, gaming accessories and tech gadgets.', '+977-9851234567', 'Ward No. 5, Bhaktapur Durbar Square, Bhaktapur', 'BL-2023-001', NULL, NULL, NULL, NULL, 8.00, TRUE, '2024-01-15 10:30:00'),
+(4, 'Fashion Forward', 'Trendy clothes and accessories for all ages. From traditional wear to modern fashion, we have it all for men, women and children.', '+977-9861234567', 'Jawalakhel, Lalitpur-10', 'BL-2023-002', NULL, NULL, NULL, NULL, 10.00, TRUE, '2024-01-20 14:45:00'),
 (6, 'Mountain Crafts', 'Authentic Nepali handicrafts and traditional items. Supporting local artisans and preserving our cultural heritage.', '+977-9876543210', 'Sauraha, Chitwan', 'BL-2024-003', NULL, NULL, NULL, '[]', 12.00, FALSE, NOW());
 
--- Insert more categories
-INSERT INTO categories (name, slug, description, sort_order) VALUES
-('Smartphones', 'smartphones', 'Latest smartphones and mobile devices', 1),
-('Laptops', 'laptops', 'Laptops and computers for work and gaming', 2),
-('Clothing', 'clothing', 'Fashionable clothing for men and women', 1),
-('Accessories', 'accessories', 'Fashion accessories and jewelry', 2),
-('Home Appliances', 'home-appliances', 'Kitchen and home appliances', 1),
-('Books & Education', 'books-education', 'Educational books and materials', 1);
+-- Insert demo products (using vendor table IDs, not user IDs)
+-- vendor_id 1 = TechHub Nepal, vendor_id 2 = Fashion Forward, vendor_id 3 = Mountain Crafts  
+-- Note: schema requires slug field, so generating slugs for products
+INSERT INTO products (vendor_id, category_id, name, slug, description, price, sale_price, sku, stock_quantity, min_stock_level, weight, dimensions, status, featured, rating, total_reviews, total_sales, meta_title, meta_description) VALUES
+(1, 7, 'iPhone 15 Pro Max', 'iphone-15-pro-max', 'Latest iPhone with advanced Pro camera system, titanium design, and A17 Pro chip', 180000.00, 175000.00, 'IP15PM-256GB', 15, 5, 0.221, '159.9 x 76.7 x 8.25 mm', 'active', TRUE, 4.8, 2, 1, 'iPhone 15 Pro Max - Latest Apple Smartphone', 'Buy iPhone 15 Pro Max with advanced camera, A17 Pro chip, and titanium design'),
+(1, 7, 'Samsung Galaxy S24 Ultra', 'samsung-galaxy-s24-ultra', 'Premium Android flagship with S Pen, 200MP camera, and Galaxy AI features', 140000.00, 135000.00, 'SGS24U-512GB', 20, 5, 0.232, '162.3 x 79.0 x 8.6 mm', 'active', TRUE, 4.7, 1, 1, 'Samsung Galaxy S24 Ultra - AI Smartphone', 'Samsung Galaxy S24 Ultra with S Pen, 200MP camera, Galaxy AI features'),
+(1, 8, 'MacBook Air M3 13-inch', 'macbook-air-m3-13-inch', 'Ultra-thin laptop with M3 chip, all-day battery life, and stunning Retina display', 165000.00, 160000.00, 'MBA-M3-512GB', 10, 3, 1.24, '304.1 x 215 x 11.3 mm', 'active', TRUE, 4.9, 1, 1, 'MacBook Air M3 - Ultra-thin Laptop', 'Apple MacBook Air with M3 chip, 13-inch Retina display, 512GB storage'),
+(1, 8, 'Dell XPS 13 Plus', 'dell-xps-13-plus', 'Premium ultrabook with 12th Gen Intel Core, OLED display option', 145000.00, NULL, 'DELL-XPS13P', 8, 2, 1.26, '295.3 x 199.04 x 15.28 mm', 'active', FALSE, 4.5, 0, 0, 'Dell XPS 13 Plus - Premium Ultrabook', 'Dell XPS 13 Plus ultrabook with Intel 12th Gen, OLED display'),
+(1, 9, 'Sony WH-1000XM5', 'sony-wh-1000xm5', 'Industry-leading noise canceling wireless headphones', 35000.00, 32000.00, 'SONY-WH1000XM5', 25, 8, 0.25, '254 x 220 x 32 mm', 'active', TRUE, 4.6, 1, 1, 'Sony WH-1000XM5 - Noise Canceling Headphones', 'Sony WH-1000XM5 wireless headphones with industry-leading noise cancellation'),
+(2, 10, 'Nike Air Max 270', 'nike-air-max-270', 'Comfortable lifestyle sneakers with Max Air unit', 12000.00, 10500.00, 'NIKE-AM270-42', 40, 10, 0.8, '28 x 18 x 12 cm', 'active', FALSE, 4.4, 1, 3, 'Nike Air Max 270 - Lifestyle Sneakers', 'Nike Air Max 270 sneakers with Max Air cushioning technology'),
+(2, 10, 'Adidas Ultraboost 22', 'adidas-ultraboost-22', 'Premium running shoes with Boost midsole technology', 15000.00, 13500.00, 'ADI-UB22-43', 30, 8, 0.85, '29 x 19 x 13 cm', 'active', TRUE, 4.7, 0, 0, 'Adidas Ultraboost 22 - Premium Running Shoes', 'Adidas Ultraboost 22 with Boost technology for ultimate comfort'),
+(2, 10, 'Levi''s 501 Original Jeans', 'levis-501-original-jeans', 'Classic straight-leg jeans, the original since 1873', 8500.00, 7500.00, 'LEVIS-501-32W', 50, 15, 0.6, 'W32 x L34', 'active', FALSE, 4.3, 0, 0, 'Levi''s 501 Original Jeans - Classic Denim', 'Levi''s 501 Original jeans, classic straight-leg fit since 1873'),
+(2, 11, 'Zara Women Blazer', 'zara-women-blazer', 'Professional blazer perfect for office and formal occasions', 6500.00, 5800.00, 'ZARA-BLAZER-M', 20, 5, 0.4, 'Medium size', 'active', TRUE, 4.2, 0, 0, 'Zara Women Professional Blazer', 'Zara women''s blazer for professional and formal wear'),
+(2, 12, 'H&M Kids Pajama Set', 'hm-kids-pajama-set', 'Comfortable cotton pajama set for children', 1800.00, 1500.00, 'HM-PAJAMA-8Y', 60, 20, 0.2, 'Age 8 years', 'active', FALSE, 4.0, 0, 0, 'H&M Kids Pajama Set - Cotton Sleepwear', 'Comfortable cotton pajama set for kids, soft and cozy'),
+(3, 3, 'Wooden Coffee Table', 'wooden-coffee-table', 'Handcrafted wooden coffee table with traditional Nepali design', 25000.00, 22000.00, 'WCT-NEPALI', 8, 2, 15.0, '120 x 60 x 45 cm', 'pending', TRUE, 0.0, 0, 0, 'Handcrafted Wooden Coffee Table - Traditional Design', 'Beautiful wooden coffee table with traditional Nepali craftsmanship'),
+(3, 4, 'Yoga Mat Eco-Friendly', 'yoga-mat-eco-friendly', 'Premium eco-friendly yoga mat made from natural rubber', 3500.00, 2800.00, 'YOGA-ECO-MAT', 80, 25, 2.2, '183 x 61 x 0.6 cm', 'active', FALSE, 4.1, 0, 0, 'Eco-Friendly Yoga Mat - Natural Rubber', 'Premium yoga mat made from eco-friendly natural rubber material');
 
--- Get category IDs for products
-SET @electronics_id = (SELECT id FROM categories WHERE slug = 'electronics');
-SET @fashion_id = (SELECT id FROM categories WHERE slug = 'fashion');
-SET @smartphones_id = (SELECT id FROM categories WHERE slug = 'smartphones');
-SET @laptops_id = (SELECT id FROM categories WHERE slug = 'laptops');
-SET @clothing_id = (SELECT id FROM categories WHERE slug = 'clothing');
-SET @books_id = (SELECT id FROM categories WHERE slug = 'books-education');
+-- Insert product images (using placeholder service for demo)
+INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order) VALUES
+(1, 'https://images.unsplash.com/photo-1592286062195-de36f8de6690?w=400&h=400&fit=crop', 'iPhone 15 Pro Max', TRUE, 1),
+(2, 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=400&h=400&fit=crop', 'Samsung Galaxy S24 Ultra', TRUE, 1),
+(3, 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=400&h=400&fit=crop', 'MacBook Air M3', TRUE, 1),
+(4, 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400&h=400&fit=crop', 'Dell XPS 13 Plus', TRUE, 1),
+(5, 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop', 'Sony WH-1000XM5 Headphones', TRUE, 1),
+(6, 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop', 'Nike Air Max 270', TRUE, 1),
+(7, 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=400&fit=crop', 'Adidas Ultraboost 22', TRUE, 1),
+(8, 'https://images.unsplash.com/photo-1582552938357-32b906df40cb?w=400&h=400&fit=crop', 'Levi''s 501 Jeans', TRUE, 1),
+(9, 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop', 'Zara Women Blazer', TRUE, 1),
+(10, 'https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=400&h=400&fit=crop', 'H&M Kids Pajama Set', TRUE, 1),
+(11, 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop', 'Wooden Coffee Table', TRUE, 1),
+(12, 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop', 'Eco-Friendly Yoga Mat', TRUE, 1);
 
--- Update category parent relationships
-UPDATE categories SET parent_id = @electronics_id WHERE slug IN ('smartphones', 'laptops');
-UPDATE categories SET parent_id = @fashion_id WHERE slug IN ('clothing', 'accessories');
+-- Insert sample orders (using correct user_ids and schema field names)
+INSERT INTO orders (user_id, order_number, total_amount, shipping_amount, tax_amount, discount_amount, shipping_address, payment_method, payment_status, status, notes) VALUES
+(2, 'TH2024001', 175500.00, 500.00, 0.00, 0.00, 'Thamel-16, Near Garden of Dreams, Kathmandu, Nepal', 'cash_on_delivery', 'pending', 'confirmed', 'Handle with care - Electronics'),
+(5, 'PK2024002', 46300.00, 300.00, 0.00, 2000.00, 'Lakeside-6, Baidam, Pokhara, Nepal', 'esewa', 'paid', 'shipped', 'Express delivery requested'),
+(2, 'KT2024003', 32250.00, 250.00, 0.00, 3000.00, 'Thamel-16, Near Garden of Dreams, Kathmandu, Nepal', 'khalti', 'paid', 'delivered', 'Customer satisfied');
 
--- Get vendor IDs
-SET @vendor1_id = (SELECT id FROM vendors WHERE shop_name = 'TechHub Nepal');
-SET @vendor2_id = (SELECT id FROM vendors WHERE shop_name = 'Fashion Forward');
-
--- Insert demo products
-INSERT INTO products (vendor_id, category_id, name, slug, description, short_description, sku, price, sale_price, stock_quantity, featured, rating, total_reviews, total_sales) VALUES
--- Electronics by TechHub Nepal
-(@vendor1_id, @smartphones_id, 'iPhone 14 Pro Max', 'iphone-14-pro-max', 'Latest iPhone with advanced camera system and A16 Bionic chip. Experience the most advanced iPhone ever with ProRAW photography, Cinematic mode, and all-day battery life.', 'Latest iPhone with advanced camera and A16 Bionic chip', 'IPHONE14PM001', 180000.00, 165000.00, 15, 1, 4.8, 24, 8),
-(@vendor1_id, @smartphones_id, 'Samsung Galaxy S23 Ultra', 'samsung-galaxy-s23-ultra', 'Premium Android smartphone with S Pen, exceptional camera capabilities, and powerful performance for productivity and creativity.', 'Premium Android smartphone with S Pen and exceptional camera', 'SAMS23U001', 150000.00, NULL, 12, 1, 4.6, 18, 12),
-(@vendor1_id, @laptops_id, 'MacBook Air M2', 'macbook-air-m2', 'Incredibly thin and light laptop powered by M2 chip. Perfect for students and professionals who need portability without compromising performance.', 'Thin and light laptop powered by M2 chip', 'MBAIRM2001', 140000.00, 135000.00, 8, 1, 4.9, 32, 15),
-(@vendor1_id, @laptops_id, 'Dell XPS 13', 'dell-xps-13', 'Premium ultrabook with InfinityEdge display and latest Intel processors. Ideal for business professionals and content creators.', 'Premium ultrabook with InfinityEdge display', 'DELLXPS13001', 120000.00, NULL, 10, 0, 4.5, 16, 6),
-(@vendor1_id, @electronics_id, 'Sony WH-1000XM4 Headphones', 'sony-wh-1000xm4', 'Industry-leading noise canceling wireless headphones with exceptional sound quality and 30-hour battery life.', 'Industry-leading noise canceling wireless headphones', 'SONYWH001', 35000.00, 32000.00, 25, 1, 4.7, 45, 32),
-
--- Fashion by Fashion Forward
-(@vendor2_id, @clothing_id, 'Premium Cotton T-Shirt', 'premium-cotton-tshirt', 'High-quality 100% cotton t-shirt available in multiple colors. Comfortable, durable, and perfect for casual wear.', 'High-quality 100% cotton t-shirt in multiple colors', 'COTTEETS001', 1200.00, 950.00, 50, 0, 4.3, 28, 45),
-(@vendor2_id, @clothing_id, 'Denim Jacket Classic', 'denim-jacket-classic', 'Timeless denim jacket made from premium denim fabric. A wardrobe essential that never goes out of style.', 'Timeless denim jacket made from premium fabric', 'DENIMJAC001', 4500.00, NULL, 20, 1, 4.4, 15, 18),
-(@vendor2_id, @fashion_id, 'Leather Handbag', 'leather-handbag', 'Elegant genuine leather handbag perfect for office and casual occasions. Features multiple compartments and durable construction.', 'Elegant genuine leather handbag for all occasions', 'LEATHBAG001', 6500.00, 5800.00, 15, 1, 4.6, 22, 12),
-(@vendor2_id, @clothing_id, 'Formal Shirt White', 'formal-shirt-white', 'Classic white formal shirt made from premium cotton blend. Perfect for office wear and formal occasions.', 'Classic white formal shirt for office wear', 'FORMSH001', 2200.00, NULL, 30, 0, 4.2, 19, 25),
-
--- Books and General Items
-(@vendor1_id, @books_id, 'Programming Book - Python', 'programming-book-python', 'Comprehensive guide to Python programming for beginners and intermediate developers. Includes practical examples and exercises.', 'Comprehensive Python programming guide with examples', 'PYTHONBOOK001', 2500.00, 2200.00, 40, 0, 4.5, 35, 28);
-
--- Insert product images (using placeholder paths)
-INSERT INTO product_images (product_id, image_url, alt_text, is_primary) VALUES
-(1, '/uploads/products/iphone14pm.jpg', 'iPhone 14 Pro Max', 1),
-(2, '/uploads/products/galaxy-s23.jpg', 'Samsung Galaxy S23 Ultra', 1),
-(3, '/uploads/products/macbook-air.jpg', 'MacBook Air M2', 1),
-(4, '/uploads/products/dell-xps13.jpg', 'Dell XPS 13', 1),
-(5, '/uploads/products/sony-headphones.jpg', 'Sony WH-1000XM4', 1),
-(6, '/uploads/products/cotton-tshirt.jpg', 'Premium Cotton T-Shirt', 1),
-(7, '/uploads/products/denim-jacket.jpg', 'Denim Jacket', 1),
-(8, '/uploads/products/leather-handbag.jpg', 'Leather Handbag', 1),
-(9, '/uploads/products/formal-shirt.jpg', 'Formal Shirt White', 1),
-(10, '/uploads/products/python-book.jpg', 'Python Programming Book', 1);
-
--- Insert product attributes
-INSERT INTO product_attributes (product_id, attribute_name, attribute_value, sort_order) VALUES
--- iPhone 14 Pro Max
-(1, 'Display', '6.7-inch Super Retina XDR', 1),
-(1, 'Processor', 'A16 Bionic chip', 2),
-(1, 'Storage', '128GB, 256GB, 512GB, 1TB', 3),
-(1, 'Camera', 'Pro camera system with 48MP Main', 4),
-(1, 'Battery', 'Up to 29 hours video playback', 5),
-
--- Samsung Galaxy S23 Ultra
-(2, 'Display', '6.8-inch Dynamic AMOLED 2X', 1),
-(2, 'Processor', 'Snapdragon 8 Gen 2', 2),
-(2, 'Storage', '256GB, 512GB, 1TB', 3),
-(2, 'Camera', '200MP main camera with AI', 4),
-(2, 'S Pen', 'Built-in S Pen included', 5),
-
--- MacBook Air M2
-(3, 'Processor', 'Apple M2 chip', 1),
-(3, 'Display', '13.6-inch Liquid Retina', 2),
-(3, 'Memory', '8GB, 16GB, 24GB unified memory', 3),
-(3, 'Storage', '256GB, 512GB, 1TB, 2TB SSD', 4),
-(3, 'Battery', 'Up to 18 hours', 5),
-
--- Cotton T-Shirt
-(6, 'Material', '100% Premium Cotton', 1),
-(6, 'Sizes', 'S, M, L, XL, XXL', 2),
-(6, 'Colors', 'White, Black, Navy, Gray', 3),
-(6, 'Care', 'Machine washable', 4);
-
--- Insert some demo reviews
-INSERT INTO reviews (product_id, user_id, rating, title, comment, is_verified, status) VALUES
-(1, 1, 5, 'Amazing phone!', 'The camera quality is incredible and the battery lasts all day. Highly recommended!', 1, 'approved'),
-(1, 4, 4, 'Good but expensive', 'Great phone with excellent features but quite pricey. Worth it if you can afford it.', 1, 'approved'),
-(3, 1, 5, 'Perfect for work', 'Lightweight, fast, and great battery life. Perfect for my daily work needs.', 1, 'approved'),
-(5, 4, 5, 'Best noise canceling', 'These headphones are amazing for travel and work from home. Sound quality is top-notch.', 1, 'approved'),
-(6, 1, 4, 'Comfortable and good quality', 'Nice fabric quality and fits well. Good value for money.', 1, 'approved');
-
--- Insert some demo cart items (for customer1)
-INSERT INTO cart (user_id, product_id, quantity) VALUES
-(1, 6, 2),
-(1, 10, 1);
-
--- Insert some demo orders
-INSERT INTO orders (user_id, order_number, total_amount, shipping_amount, tax_amount, status, payment_status, payment_method, shipping_address, billing_address) VALUES
-(1, 'SH20241001000001', 37600.00, 100.00, 4588.46, 'delivered', 'paid', 'cod', 'Thamel, Kathmandu, Nepal', 'Thamel, Kathmandu, Nepal'),
-(4, 'SH20241002000002', 6760.00, 0.00, 871.54, 'shipped', 'paid', 'bank_transfer', 'Pokhara, Nepal', 'Pokhara, Nepal');
-
--- Insert order items
+-- Insert order items (using correct vendor_ids and schema field names)
 INSERT INTO order_items (order_id, product_id, vendor_id, quantity, price, total) VALUES
-(1, 5, 1, 1, 32000.00, 32000.00),
-(2, 8, 2, 1, 5800.00, 5800.00);
+(1, 1, 1, 1, 175000.00, 175000.00),
+(2, 6, 2, 3, 10500.00, 31500.00),
+(2, 11, 3, 1, 22000.00, 22000.00),
+(3, 5, 1, 1, 32000.00, 32000.00);
 
--- Update vendor ratings and sales
-UPDATE vendors SET rating = 4.7, total_sales = 180000.00 WHERE id = 1;
-UPDATE vendors SET rating = 4.5, total_sales = 85000.00 WHERE id = 2;
+-- Insert product reviews (using correct table name "reviews" and schema field names)
+INSERT INTO reviews (product_id, user_id, rating, title, comment, is_verified, helpful_count, status) VALUES
+(1, 5, 5, 'Outstanding flagship phone!', 'Amazing phone! Camera quality is outstanding, A17 Pro chip performance is incredible, and battery life easily lasts all day. The titanium build feels premium and durable.', TRUE, 12, 'approved'),
+(1, 2, 4, 'Great phone but pricey', 'Good phone with excellent features but quite expensive. The Pro camera system is definitely worth it for photography enthusiasts. Face ID works flawlessly.', FALSE, 8, 'approved'),
+(3, 5, 5, 'Perfect laptop for professionals', 'Best laptop I have ever used! M3 chip is incredibly fast and handles everything I throw at it. Battery life is amazing - easily 15+ hours of work. The display is gorgeous!', TRUE, 15, 'approved'),
+(6, 2, 4, 'Comfortable everyday sneakers', 'Very comfortable shoes perfect for daily wear and light running. The Air Max cushioning provides great support. Stylish design that goes with everything.', TRUE, 6, 'approved'),
+(2, 5, 5, 'Samsung at its best', 'The S24 Ultra is a powerhouse! S Pen functionality is smooth, cameras are incredible especially in low light. Galaxy AI features are genuinely useful.', TRUE, 9, 'approved'),
+(5, 2, 5, 'Best noise canceling headphones', 'Sony WH-1000XM5 are simply the best! Noise cancellation is industry-leading, sound quality is pristine, and they''re comfortable for long listening sessions.', TRUE, 18, 'approved');
 
--- Insert some coupons
-INSERT INTO coupons (code, description, discount_type, discount_value, minimum_amount, usage_limit, start_date, end_date, is_active) VALUES
-('WELCOME10', 'Welcome discount for new customers', 'percentage', 10.00, 1000.00, 100, '2024-01-01', '2024-12-31', 1),
-('SAVE500', 'Save Rs. 500 on orders over Rs. 5000', 'fixed', 500.00, 5000.00, 50, '2024-01-01', '2024-12-31', 1),
-('FREESHIP', 'Free shipping on any order', 'fixed', 100.00, 0.00, 200, '2024-01-01', '2024-12-31', 1);
+-- Insert wishlist items (using correct table name "wishlist")
+INSERT INTO wishlist (user_id, product_id) VALUES
+(2, 3),
+(2, 11),
+(2, 2),
+(5, 1),
+(5, 5),
+(5, 7);
 
--- Insert notifications
-INSERT INTO notifications (user_id, title, message, type) VALUES
-(1, 'Order Delivered', 'Your order #SH20241001000001 has been delivered successfully!', 'success'),
-(1, 'Welcome to Sasto Hub', 'Thank you for joining Sasto Hub. Enjoy shopping with us!', 'info'),
-(4, 'Order Shipped', 'Your order #SH20241002000002 has been shipped and is on the way!', 'info');
+-- Insert cart items (schema doesn't have added_at field)
+INSERT INTO cart (user_id, product_id, quantity) VALUES
+(2, 2, 1),
+(2, 9, 2),
+(5, 12, 1),
+(5, 8, 1);
 
--- Update settings
-UPDATE settings SET setting_value = 'Sasto Hub - Your one-stop shop for everything' WHERE setting_key = 'site_description';
+-- Insert default settings
+INSERT INTO settings (setting_key, setting_value, description) VALUES
+('site_name', 'Sasto Hub', 'Website name'),
+('site_description', 'Your one-stop shop for everything', 'Website description'),
+('site_email', 'info@sastohub.com', 'Contact email'),
+('site_phone', '+977-1-4000000', 'Contact phone'),
+('currency', 'NPR', 'Default currency'),
+('shipping_charge', '100', 'Default shipping charge'),
+('tax_rate', '13', 'Tax rate percentage'),
+('min_order_amount', '500', 'Minimum order amount for free shipping');
 
--- Add more sample products to make the platform look fuller
-INSERT INTO products (vendor_id, category_id, name, slug, description, short_description, sku, price, sale_price, stock_quantity, featured, rating, total_reviews) VALUES
-(@vendor1_id, @smartphones_id, 'Google Pixel 7', 'google-pixel-7', 'Pure Google experience with advanced AI photography', 'Pure Google experience with AI photography', 'PIXEL7001', 75000.00, 68000.00, 18, 0, 4.4, 12),
-(@vendor1_id, @electronics_id, 'iPad Air 5th Gen', 'ipad-air-5', 'Powerful and versatile iPad with M1 chip', 'Powerful iPad with M1 chip for creativity', 'IPADAIR5001', 85000.00, NULL, 22, 1, 4.6, 28),
-(@vendor2_id, @clothing_id, 'Casual Jeans', 'casual-jeans', 'Comfortable and stylish jeans for everyday wear', 'Comfortable casual jeans for daily wear', 'JEANS001', 3500.00, 2800.00, 35, 0, 4.2, 15),
-(@vendor2_id, @fashion_id, 'Sports Watch', 'sports-watch', 'Digital sports watch with multiple features', 'Feature-rich digital sports watch', 'SWATCH001', 4200.00, NULL, 28, 0, 4.1, 9);
+-- Insert default hero sections
+INSERT INTO hero_sections (position, title, subtitle, description, button_text, button_link, image_url, background_color, text_color) VALUES
+(1, 'Welcome to Sasto Hub', 'Your One-Stop Shopping Destination', 'Discover amazing products at unbeatable prices. Shop from thousands of vendors and enjoy fast delivery across Nepal.', 'Shop Now', '?page=products', '/assets/images/hero-placeholder.svg', '#ff6b35', '#ffffff'),
+(2, 'Flash Sale', 'Up to 70% Off', 'Limited time offers on electronics, fashion, and home essentials. Don\'t miss out on these incredible deals!', 'View Deals', '?page=products&sale=1', '/assets/images/hero-placeholder.svg', '#e74c3c', '#ffffff'),
+(3, 'Become a Vendor', 'Start Your Business Today', 'Join thousands of successful vendors on Sasto Hub. Easy setup, powerful tools, and millions of customers waiting.', 'Join Now', '?page=become-vendor', '/assets/images/hero-placeholder.svg', '#27ae60', '#ffffff');
 
--- Add corresponding product images
-INSERT INTO product_images (product_id, image_url, alt_text, is_primary) VALUES
-(11, '/uploads/products/pixel-7.jpg', 'Google Pixel 7', 1),
-(12, '/uploads/products/ipad-air.jpg', 'iPad Air 5th Generation', 1),
-(13, '/uploads/products/casual-jeans.jpg', 'Casual Jeans', 1),
-(14, '/uploads/products/sports-watch.jpg', 'Sports Watch', 1);
+-- ==========================================
+-- IMPORTANT: LOGIN CREDENTIALS FOR TESTING
+-- ==========================================
+-- ADMIN ACCESS:
+-- Email: admin@sastohub.com
+-- Password: password
+--
+-- VENDOR ACCOUNTS:
+-- Email: vendor@test.com | Password: password (Active Vendor - TechHub Nepal)
+-- Email: vendor2@test.com | Password: password (Active Vendor - Fashion Forward)  
+-- Email: newvendor@test.com | Password: password (Pending Vendor - Mountain Crafts)
+--
+-- CUSTOMER ACCOUNTS:
+-- Email: customer@test.com | Password: password (John Doe)
+-- Email: jane@test.com | Password: password (Jane Smith)
+-- ==========================================
+--
+-- USER ID MAPPING FOR REFERENCE:
+-- 1 = Admin User
+-- 2 = John Doe (Customer)
+-- 3 = Ram Sharma (Vendor - TechHub Nepal)
+-- 4 = Sita Patel (Vendor - Fashion Forward) 
+-- 5 = Jane Smith (Customer)
+-- 6 = Maya Gurung (Pending Vendor - Mountain Crafts)
+--
+-- VENDOR ID MAPPING:
+-- 1 = TechHub Nepal (user_id: 3)
+-- 2 = Fashion Forward (user_id: 4)
+-- 3 = Mountain Crafts (user_id: 6)
+-- ==========================================

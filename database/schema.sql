@@ -245,34 +245,5 @@ CREATE TABLE hero_sections (
     INDEX idx_position_active (position, is_active)
 );
 
--- Insert default admin user
-INSERT INTO users (username, email, password, first_name, last_name, user_type) 
-VALUES ('admin', 'admin@sastohub.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', 'admin');
-
--- Insert default categories
-INSERT INTO categories (name, slug, description) VALUES
-('Electronics', 'electronics', 'Electronic devices and gadgets'),
-('Fashion', 'fashion', 'Clothing and accessories'),
-('Home & Garden', 'home-garden', 'Home improvement and garden supplies'),
-('Sports', 'sports', 'Sports equipment and accessories'),
-('Books', 'books', 'Books and educational materials'),
-('Health & Beauty', 'health-beauty', 'Health and beauty products'),
-('Automotive', 'automotive', 'Car parts and accessories'),
-('Toys & Games', 'toys-games', 'Toys and gaming products');
-
--- Insert default settings
-INSERT INTO settings (setting_key, setting_value, description) VALUES
-('site_name', 'Sasto Hub', 'Website name'),
-('site_description', 'Your one-stop shop for everything', 'Website description'),
-('site_email', 'info@sastohub.com', 'Contact email'),
-('site_phone', '+977-1-4000000', 'Contact phone'),
-('currency', 'NPR', 'Default currency'),
-('shipping_charge', '100', 'Default shipping charge'),
-('tax_rate', '13', 'Tax rate percentage'),
-('min_order_amount', '500', 'Minimum order amount for free shipping');
-
--- Insert default hero sections
-INSERT INTO hero_sections (position, title, subtitle, description, button_text, button_link, image_url, background_color, text_color) VALUES
-(1, 'Welcome to Sasto Hub', 'Your One-Stop Shopping Destination', 'Discover amazing products at unbeatable prices. Shop from thousands of vendors and enjoy fast delivery across Nepal.', 'Shop Now', '?page=products', '/assets/images/hero-placeholder.svg', '#ff6b35', '#ffffff'),
-(2, 'Flash Sale', 'Up to 70% Off', 'Limited time offers on electronics, fashion, and home essentials. Don\'t miss out on these incredible deals!', 'View Deals', '?page=products&sale=1', '/assets/images/hero-placeholder.svg', '#e74c3c', '#ffffff'),
-(3, 'Become a Vendor', 'Start Your Business Today', 'Join thousands of successful vendors on Sasto Hub. Easy setup, powerful tools, and millions of customers waiting.', 'Join Now', '?page=register&type=vendor', '/assets/images/hero-placeholder.svg', '#27ae60', '#ffffff');
+-- Note: All sample data and default records are now in demo_data.sql
+-- This file contains only the database schema structure

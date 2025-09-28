@@ -28,40 +28,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         global $database;
         
-        // Check user credentials
-        $user = $database->fetchOne(
-            "SELECT * FROM users WHERE email = ? AND status = 'active'", 
+        // First, check if user exists at all
+        $userCheck = $database->fetchOne(
+            "SELECT email, status, user_type FROM users WHERE email = ?", 
             [$email]
         );
         
-        if ($user && password_verify($password, $user['password'])) {
-            // Set session variables
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['email'] = $user['email'];
-            $_SESSION['first_name'] = $user['first_name'];
-            $_SESSION['last_name'] = $user['last_name'];
-            $_SESSION['user_type'] = $user['user_type'];
-            $_SESSION['status'] = $user['status'];
-            $_SESSION['profile_image'] = $user['profile_image'];
-            
-            // Set remember me cookie if requested
-            if ($remember) {
-                $cookieValue = base64_encode($user['id'] . ':' . hash('sha256', $user['password']));
-                setcookie('remember_token', $cookieValue, time() + (86400 * 30), '/'); // 30 days
-            }
-            
-            // Redirect based on user type
-            if ($user['user_type'] === 'admin') {
-                redirectTo('?page=admin');
-            } elseif ($user['user_type'] === 'vendor') {
-                redirectTo('?page=vendor');
-            } else {
-                $redirect = $_GET['redirect'] ?? '';
-                redirectTo($redirect ?: '');
-            }
+        if (!$userCheck) {
+            $error = "No account found with email: " . htmlspecialchars($email);
+        } elseif ($userCheck['status'] !== 'active') {
+            $error = "Account status: " . htmlspecialchars($userCheck['status']) . ". Only active accounts can login.";
         } else {
-            $error = 'Invalid email or password.';
+            // Get full user data for active user
+            $user = $database->fetchOne(
+                "SELECT * FROM users WHERE email = ? AND status = 'active'", 
+                [$email]
+            );
+            
+            if ($user) {
+                // Debug password verification
+                $passwordVerified = password_verify($password, $user['password']);
+                
+                if ($passwordVerified) {
+                    // Set session variables
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['email'] = $user['email'];
+                    $_SESSION['first_name'] = $user['first_name'];
+                    $_SESSION['last_name'] = $user['last_name'];
+                    $_SESSION['user_type'] = $user['user_type'];
+                    $_SESSION['status'] = $user['status'];
+                    $_SESSION['profile_image'] = $user['profile_image'];
+                    
+                    // Set remember me cookie if requested
+                    if ($remember) {
+                        $cookieValue = base64_encode($user['id'] . ':' . hash('sha256', $user['password']));
+                        setcookie('remember_token', $cookieValue, time() + (86400 * 30), '/'); // 30 days
+                    }
+                    
+                    // Redirect based on user type
+                    if ($user['user_type'] === 'admin') {
+                        redirectTo('?page=admin');
+                    } elseif ($user['user_type'] === 'vendor') {
+                        redirectTo('?page=vendor');
+                    } else {
+                        $redirect = $_GET['redirect'] ?? '';
+                        redirectTo($redirect ?: '');
+                    }
+                } else {
+                    // Password verification failed - check if it's a demo account
+                    if (in_array($email, ['customer@test.com', 'vendor@test.com', 'vendor2@test.com', 'jane@test.com', 'newvendor@test.com']) && $password === 'password') {
+                        $error = "Demo account found but password hash doesn't match. Hash in DB: " . substr($user['password'], 0, 30) . "...";
+                    } else {
+                        $error = 'Password verification failed for email: ' . htmlspecialchars($email);
+                    }
+                }
+            } else {
+                $error = 'Error retrieving user data.';
+            }
         }
     }
 }
