@@ -14,17 +14,17 @@ if (!isset($product)) {
 }
 ?>
 
-<div class="bg-white rounded-lg shadow-md overflow-hidden product-card group">
+<div class="bg-white rounded-lg shadow-md overflow-hidden product-card group h-full flex flex-col">
     <!-- Product Image -->
-    <div class="relative image-zoom">
+    <div class="relative image-zoom flex-shrink-0">
         <a href="?page=product&id=<?php echo $product['id']; ?>">
             <?php if (!empty($product['image_url'])): ?>
                 <img src="<?php echo SITE_URL . $product['image_url']; ?>" 
                      alt="<?php echo htmlspecialchars($product['name']); ?>"
-                     class="w-full h-48 object-cover">
+                     class="w-full h-40 sm:h-48 object-cover">
             <?php else: ?>
-                <div class="w-full h-48 bg-gray-200 flex items-center justify-center image-placeholder">
-                    <i class="fas fa-image text-gray-400 text-3xl"></i>
+                <div class="w-full h-40 sm:h-48 bg-gray-200 flex items-center justify-center image-placeholder">
+                    <i class="fas fa-image text-gray-400 text-2xl sm:text-3xl"></i>
                 </div>
             <?php endif; ?>
         </a>
@@ -47,16 +47,16 @@ if (!isset($product)) {
         <?php endif; ?>
         
         <!-- Wishlist & Quick Actions -->
-        <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 lg:opacity-100 transition-opacity duration-300">
             <?php if (!isset($product['featured']) || !$product['featured']): ?>
                 <button onclick="toggleWishlist(<?php echo $product['id']; ?>)" 
-                        class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 shadow-md transition duration-200"
+                        class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 shadow-md transition duration-200 touch-manipulation"
                         data-product-id="<?php echo $product['id']; ?>">
                     <i class="fas fa-heart text-sm"></i>
                 </button>
             <?php endif; ?>
             <button onclick="addToCart(<?php echo $product['id']; ?>)" 
-                    class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center hover:bg-opacity-90 shadow-md transition duration-200">
+                    class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center hover:bg-opacity-90 shadow-md transition duration-200 touch-manipulation">
                 <i class="fas fa-shopping-cart text-sm"></i>
             </button>
         </div>
@@ -74,21 +74,21 @@ if (!isset($product)) {
     </div>
     
     <!-- Product Info -->
-    <div class="p-4">
+    <div class="p-3 sm:p-4 flex-1 flex flex-col">
         <!-- Category & Vendor -->
         <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
             <?php if (!empty($product['category_name'])): ?>
-                <span class="bg-gray-100 px-2 py-1 rounded"><?php echo htmlspecialchars($product['category_name']); ?></span>
+                <span class="bg-gray-100 px-2 py-1 rounded text-xs"><?php echo htmlspecialchars($product['category_name']); ?></span>
             <?php endif; ?>
             <?php if (!empty($product['shop_name'])): ?>
-                <span><?php echo htmlspecialchars($product['shop_name']); ?></span>
+                <span class="truncate ml-2"><?php echo htmlspecialchars($product['shop_name']); ?></span>
             <?php endif; ?>
         </div>
         
         <!-- Product Name -->
-        <h3 class="font-semibold text-gray-800 mb-2 line-clamp-2">
+        <h3 class="font-semibold text-gray-800 mb-2 line-clamp-2 flex-grow">
             <a href="?page=product&id=<?php echo $product['id']; ?>" 
-               class="hover:text-primary transition duration-200">
+               class="hover:text-primary transition duration-200 text-sm sm:text-base">
                 <?php echo htmlspecialchars($product['name']); ?>
             </a>
         </h3>
@@ -96,7 +96,7 @@ if (!isset($product)) {
         <!-- Rating -->
         <?php if ($product['rating'] > 0): ?>
             <div class="flex items-center mb-2">
-                <div class="flex text-yellow-400 text-sm">
+                <div class="flex text-yellow-400 text-xs sm:text-sm">
                     <?php for ($i = 1; $i <= 5; $i++): ?>
                         <i class="fas fa-star <?php echo $i <= $product['rating'] ? '' : 'text-gray-300'; ?>"></i>
                     <?php endfor; ?>
@@ -106,8 +106,8 @@ if (!isset($product)) {
         <?php endif; ?>
         
         <!-- Price -->
-        <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center space-x-2">
+        <div class="mb-3">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
                 <?php if (!empty($product['sale_price']) && $product['sale_price'] < $product['price']): ?>
                     <span class="text-lg font-bold text-primary"><?php echo formatPrice($product['sale_price']); ?></span>
                     <span class="text-sm text-gray-500 line-through"><?php echo formatPrice($product['price']); ?></span>
@@ -119,7 +119,7 @@ if (!isset($product)) {
         
         <!-- Add to Cart Button -->
         <button onclick="addToCart(<?php echo $product['id']; ?>)" 
-                class="w-full bg-primary text-white py-2 rounded-md font-semibold hover:bg-opacity-90 transition duration-200 <?php echo $product['stock_quantity'] <= 0 ? 'opacity-50 cursor-not-allowed' : ''; ?>"
+                class="w-full bg-primary text-white py-2 sm:py-3 rounded-md font-semibold hover:bg-opacity-90 transition duration-200 text-sm sm:text-base touch-manipulation <?php echo $product['stock_quantity'] <= 0 ? 'opacity-50 cursor-not-allowed' : ''; ?>"
                 <?php echo $product['stock_quantity'] <= 0 ? 'disabled' : ''; ?>>
             <?php if ($product['stock_quantity'] <= 0): ?>
                 <i class="fas fa-times-circle mr-2"></i>Out of Stock

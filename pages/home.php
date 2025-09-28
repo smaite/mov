@@ -85,15 +85,15 @@ $saleProducts = $database->fetchAll("
             <p class="text-gray-600 text-lg">Find exactly what you're looking for</p>
         </div>
         
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
             <?php foreach ($categories as $category): ?>
                 <a href="?page=category&slug=<?php echo $category['slug']; ?>" 
-                   class="group bg-gray-50 rounded-lg p-6 text-center hover:shadow-lg transition duration-300">
-                    <div class="w-16 h-16 mx-auto mb-4 bg-primary rounded-full flex items-center justify-center text-white text-2xl group-hover:scale-110 transition duration-300">
+                   class="group bg-gray-50 rounded-lg p-4 lg:p-6 text-center hover:shadow-lg transition duration-300">
+                    <div class="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3 lg:mb-4 bg-primary rounded-full flex items-center justify-center text-white text-lg lg:text-2xl group-hover:scale-110 transition duration-300">
                         <i class="fas fa-tag"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-2"><?php echo htmlspecialchars($category['name']); ?></h3>
-                    <p class="text-sm text-gray-600"><?php echo $category['product_count']; ?> products</p>
+                    <h3 class="font-semibold text-gray-800 mb-1 lg:mb-2 text-sm lg:text-base"><?php echo htmlspecialchars($category['name']); ?></h3>
+                    <p class="text-xs lg:text-sm text-gray-600"><?php echo $category['product_count']; ?> products</p>
                 </a>
             <?php endforeach; ?>
         </div>
@@ -115,7 +115,7 @@ $saleProducts = $database->fetchAll("
             <p class="text-gray-600 text-lg">Hand-picked products just for you</p>
         </div>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             <?php foreach ($featuredProducts as $product): ?>
                 <?php renderProductCard($product); ?>
             <?php endforeach; ?>
@@ -141,7 +141,7 @@ $saleProducts = $database->fetchAll("
             <p class="text-gray-600 text-lg">Limited time offers you can't miss</p>
         </div>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             <?php foreach ($saleProducts as $product): ?>
                 <?php renderProductCard($product); ?>
             <?php endforeach; ?>
@@ -164,7 +164,7 @@ $saleProducts = $database->fetchAll("
             <p class="text-gray-600 text-lg">Discover the newest products</p>
         </div>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6">
             <?php foreach ($latestProducts as $product): ?>
                 <?php renderProductCard($product); ?>
             <?php endforeach; ?>

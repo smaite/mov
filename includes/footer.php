@@ -96,8 +96,39 @@
         // Mobile menu toggle
         function toggleMobileMenu() {
             const mobileMenu = document.getElementById('mobile-menu');
-            mobileMenu.classList.toggle('hidden');
+            const body = document.body;
+            
+            if (mobileMenu.classList.contains('translate-x-full')) {
+                // Show menu
+                mobileMenu.classList.remove('translate-x-full');
+                body.style.overflow = 'hidden'; // Prevent background scrolling
+            } else {
+                // Hide menu
+                mobileMenu.classList.add('translate-x-full');
+                body.style.overflow = ''; // Restore scrolling
+            }
         }
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const mobileMenu = document.getElementById('mobile-menu');
+            const menuButton = event.target.closest('[onclick="toggleMobileMenu()"]');
+            
+            if (!menuButton && !mobileMenu.contains(event.target) && !mobileMenu.classList.contains('translate-x-full')) {
+                toggleMobileMenu();
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 1024) { // lg breakpoint
+                const mobileMenu = document.getElementById('mobile-menu');
+                if (!mobileMenu.classList.contains('translate-x-full')) {
+                    mobileMenu.classList.add('translate-x-full');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
 
         // CSRF token for AJAX requests
         const csrfToken = '<?php echo generateCSRFToken(); ?>';
@@ -137,7 +168,11 @@
 
         // Update cart count
         function updateCartCount(count) {
-            document.getElementById('cart-count').textContent = count;
+            const cartCount = document.getElementById('cart-count');
+            const mobileCartCount = document.getElementById('mobile-cart-count');
+            
+            if (cartCount) cartCount.textContent = count;
+            if (mobileCartCount) mobileCartCount.textContent = count;
         }
 
         // Wishlist functionality
