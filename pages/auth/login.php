@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['first_name'] = $user['first_name'];
             $_SESSION['last_name'] = $user['last_name'];
             $_SESSION['user_type'] = $user['user_type'];
+            $_SESSION['status'] = $user['status'];
             $_SESSION['profile_image'] = $user['profile_image'];
             
             // Set remember me cookie if requested

@@ -105,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['first_name'] = $firstName;
                     $_SESSION['last_name'] = $lastName;
                     $_SESSION['user_type'] = $userType;
+                    $_SESSION['status'] = 'active'; // Regular customers are active by default
                     $_SESSION['profile_image'] = null;
                     
                     // Redirect after 2 seconds

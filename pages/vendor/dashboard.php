@@ -16,7 +16,7 @@ if (!$vendor) {
 }
 
 // Check if vendor is verified
-if ($_SESSION['status'] !== 'active') {
+if (!isset($_SESSION['status']) || $_SESSION['status'] !== 'active') {
     include __DIR__ . '/verification-pending.php';
     return;
 }

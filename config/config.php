@@ -161,17 +161,6 @@ function uploadImage($file, $directory, $allowedTypes = ALLOWED_IMAGE_TYPES) {
     return false;
 }
 
-function timeAgo($datetime) {
-    $time = time() - strtotime($datetime);
-    
-    if ($time < 60) return 'just now';
-    if ($time < 3600) return floor($time/60) . ' minutes ago';
-    if ($time < 86400) return floor($time/3600) . ' hours ago';
-    if ($time < 2592000) return floor($time/86400) . ' days ago';
-    if ($time < 31536000) return floor($time/2592000) . ' months ago';
-    
-    return floor($time/31536000) . ' years ago';
-}
 
 // CSRF Protection
 function generateCSRFToken() {
