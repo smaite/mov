@@ -420,7 +420,7 @@ $currentPrice = $product['sale_price'] && $product['sale_price'] < $product['pri
             <h2 class="text-2xl font-bold text-gray-800 mb-6">Related Products</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <?php foreach ($relatedProducts as $relatedProduct): ?>
-                    <?php $product = $relatedProduct; include '../../includes/product-card.php'; ?>
+                    <?php renderProductCard($relatedProduct); ?>
                 <?php endforeach; ?>
             </div>
         </section>

@@ -153,4 +153,31 @@ function generateCSRFToken() {
 function verifyCSRFToken($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
+
+// Helper function to include components with proper path resolution
+function includeComponent($componentPath, $data = []) {
+    $fullPath = ROOT_PATH . '/' . ltrim($componentPath, '/');
+    
+    if (file_exists($fullPath)) {
+        // Extract data variables for the component
+        if (!empty($data)) {
+            extract($data);
+        }
+        include $fullPath;
+    } else {
+        error_log("Component not found: " . $fullPath);
+        echo "<!-- Component not found: " . htmlspecialchars($componentPath) . " -->";
+    }
+}
+
+// Alternative function for product card specifically
+function renderProductCard($product) {
+    $productCardPath = ROOT_PATH . '/includes/product-card.php';
+    
+    if (file_exists($productCardPath)) {
+        include $productCardPath;
+    } else {
+        echo "<!-- Product card template not found -->";
+    }
+}
 ?>

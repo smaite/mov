@@ -117,7 +117,7 @@ $saleProducts = $database->fetchAll("
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <?php foreach ($featuredProducts as $product): ?>
-                <?php include 'includes/product-card.php'; ?>
+                <?php renderProductCard($product); ?>
             <?php endforeach; ?>
         </div>
         
@@ -143,7 +143,7 @@ $saleProducts = $database->fetchAll("
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <?php foreach ($saleProducts as $product): ?>
-                <?php include 'includes/product-card.php'; ?>
+                <?php renderProductCard($product); ?>
             <?php endforeach; ?>
         </div>
         
@@ -166,7 +166,7 @@ $saleProducts = $database->fetchAll("
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6">
             <?php foreach ($latestProducts as $product): ?>
-                <?php include 'includes/product-card.php'; ?>
+                <?php renderProductCard($product); ?>
             <?php endforeach; ?>
         </div>
         

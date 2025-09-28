@@ -1,6 +1,17 @@
 <?php
 // Product card component
 // Expects $product variable with product data
+
+// Prevent direct access
+if (!defined('SITE_URL')) {
+    header('HTTP/1.0 403 Forbidden');
+    exit('Direct access not allowed');
+}
+
+// Check if $product is defined
+if (!isset($product)) {
+    return;
+}
 ?>
 
 <div class="bg-white rounded-lg shadow-md overflow-hidden product-card group">

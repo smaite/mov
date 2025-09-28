@@ -18,10 +18,16 @@ RewriteRule ^(.*)/$ /$1 [L,R=301]
     Deny from all
 </FilesMatch>
 
-# Block access to config and includes directories
+# Block direct access to config, includes, and database directories
 <IfModule mod_rewrite.c>
     RewriteRule ^(config|includes|database)/ - [F,L]
 </IfModule>
+
+# Block direct access to PHP files in includes directory
+<Files ~ "^(includes)/.*\.php$">
+    Order Allow,Deny  
+    Deny from all
+</Files>
 
 # Security headers
 <IfModule mod_headers.c>
