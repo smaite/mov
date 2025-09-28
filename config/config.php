@@ -52,7 +52,7 @@ define('MAX_IMAGE_SIZE', 5 * 1024 * 1024); // 5MB
 define('ALLOWED_IMAGE_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
 
 // Include database configuration
-require_once ROOT_PATH . '/config/database.php';
+require_once __DIR__ . '/database.php';
 
 // Utility functions
 function sanitizeInput($data) {
@@ -60,8 +60,13 @@ function sanitizeInput($data) {
 }
 
 function redirectTo($url) {
-    header("Location: " . SITE_URL . $url);
-    exit();
+    if (!headers_sent()) {
+        header("Location: " . SITE_URL . $url);
+        exit();
+    } else {
+        echo "<script>window.location.href = '" . SITE_URL . $url . "';</script>";
+        exit();
+    }
 }
 
 function isLoggedIn() {
