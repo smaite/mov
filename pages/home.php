@@ -57,25 +57,8 @@ $saleProducts = $database->fetchAll("
 ");
 ?>
 
-<!-- Hero Section -->
-<section class="bg-gradient-primary text-white py-20">
-    <div class="container mx-auto px-4 text-center">
-        <h1 class="text-5xl md:text-6xl font-bold mb-6 text-shadow">
-            Welcome to <span class="text-accent">Sasto Hub</span>
-        </h1>
-        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-            Discover thousands of quality products at unbeatable prices. Shop from trusted vendors across the globe.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="?page=products" class="bg-white text-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-opacity-90 transition duration-300">
-                <i class="fas fa-shopping-bag mr-2"></i>Shop Now
-            </a>
-            <a href="?page=register&type=vendor" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-primary transition duration-300">
-                <i class="fas fa-store mr-2"></i>Become a Vendor
-            </a>
-        </div>
-    </div>
-</section>
+<!-- Custom Hero Banners -->
+<?php include __DIR__ . '/../includes/custom-hero.php'; ?>
 
 <!-- Categories Section -->
 <section class="py-16 bg-white">

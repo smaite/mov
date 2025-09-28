@@ -219,6 +219,24 @@ CREATE TABLE settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Hero sections table
+CREATE TABLE hero_sections (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    position INT NOT NULL DEFAULT 1,
+    title VARCHAR(200) NOT NULL,
+    subtitle TEXT,
+    description TEXT,
+    button_text VARCHAR(100),
+    button_link VARCHAR(500),
+    image_url VARCHAR(500),
+    background_color VARCHAR(20) DEFAULT '#ff6b35',
+    text_color VARCHAR(20) DEFAULT '#ffffff',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_position_active (position, is_active)
+);
+
 -- Insert default admin user
 INSERT INTO users (username, email, password, first_name, last_name, user_type) 
 VALUES ('admin', 'admin@sastohub.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'User', 'admin');
@@ -244,3 +262,9 @@ INSERT INTO settings (setting_key, setting_value, description) VALUES
 ('shipping_charge', '100', 'Default shipping charge'),
 ('tax_rate', '13', 'Tax rate percentage'),
 ('min_order_amount', '500', 'Minimum order amount for free shipping');
+
+-- Insert default hero sections
+INSERT INTO hero_sections (position, title, subtitle, description, button_text, button_link, image_url, background_color, text_color) VALUES
+(1, 'Welcome to Sasto Hub', 'Your One-Stop Shopping Destination', 'Discover amazing products at unbeatable prices. Shop from thousands of vendors and enjoy fast delivery across Nepal.', 'Shop Now', '?page=products', '/assets/images/hero-placeholder.svg', '#ff6b35', '#ffffff'),
+(2, 'Flash Sale', 'Up to 70% Off', 'Limited time offers on electronics, fashion, and home essentials. Don\'t miss out on these incredible deals!', 'View Deals', '?page=products&sale=1', '/assets/images/hero-placeholder.svg', '#e74c3c', '#ffffff'),
+(3, 'Become a Vendor', 'Start Your Business Today', 'Join thousands of successful vendors on Sasto Hub. Easy setup, powerful tools, and millions of customers waiting.', 'Join Now', '?page=register&type=vendor', '/assets/images/hero-placeholder.svg', '#27ae60', '#ffffff');

@@ -7,6 +7,9 @@ if (!isAdmin()) {
     redirectTo('?page=login');
 }
 
+// Handle different admin sections
+$section = $_GET['section'] ?? 'dashboard';
+
 global $database;
 
 // Get dashboard statistics
