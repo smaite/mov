@@ -60,30 +60,31 @@ $saleProducts = $database->fetchAll("
 <!-- Custom Hero Banners -->
 <?php include __DIR__ . '/../includes/custom-hero.php'; ?>
 
-<!-- Categories Section -->
-<section class="py-16 bg-white">
+<!-- Modern Categories Section -->
+<section class="py-12 lg:py-20 bg-gray-50">
     <div class="container mx-auto px-4">
         <div class="text-center mb-12">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Shop by Category</h2>
-            <p class="text-gray-600 text-lg">Find exactly what you're looking for</p>
+            <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Shop by Category</h2>
+            <p class="text-gray-600 text-lg max-w-2xl mx-auto">Discover thousands of products across all categories</p>
         </div>
         
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6">
             <?php foreach ($categories as $category): ?>
                 <a href="?page=category&slug=<?php echo $category['slug']; ?>" 
-                   class="group bg-gray-50 rounded-lg p-4 lg:p-6 text-center hover:shadow-lg transition duration-300">
-                    <div class="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-3 lg:mb-4 bg-primary rounded-full flex items-center justify-center text-white text-lg lg:text-2xl group-hover:scale-110 transition duration-300">
+                   class="group bg-white rounded-2xl p-6 text-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                         <i class="fas fa-tag"></i>
                     </div>
-                    <h3 class="font-semibold text-gray-800 mb-1 lg:mb-2 text-sm lg:text-base"><?php echo htmlspecialchars($category['name']); ?></h3>
-                    <p class="text-xs lg:text-sm text-gray-600"><?php echo $category['product_count']; ?> products</p>
+                    <h3 class="font-bold text-gray-900 mb-2 text-sm lg:text-base group-hover:text-blue-600 transition-colors"><?php echo htmlspecialchars($category['name']); ?></h3>
+                    <p class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full inline-block"><?php echo number_format($category['product_count']); ?> items</p>
                 </a>
             <?php endforeach; ?>
         </div>
         
-        <div class="text-center mt-8">
-            <a href="?page=products" class="text-primary font-semibold hover:text-opacity-80">
-                View All Categories <i class="fas fa-arrow-right ml-1"></i>
+        <div class="text-center mt-12">
+            <a href="?page=products" class="inline-flex items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
+                View All Categories
+                <i class="fas fa-arrow-right ml-2"></i>
             </a>
         </div>
     </div>
@@ -91,48 +92,65 @@ $saleProducts = $database->fetchAll("
 
 <!-- Featured Products Section -->
 <?php if (!empty($featuredProducts)): ?>
-<section class="py-16 bg-gray-50">
+<section class="py-16 bg-white">
     <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Featured Products</h2>
-            <p class="text-gray-600 text-lg">Hand-picked products just for you</p>
+        <div class="flex items-center justify-between mb-12">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Featured Products</h2>
+                <p class="text-gray-600">Hand-picked products just for you</p>
+            </div>
+            <a href="?page=products&featured=1" class="hidden lg:inline-flex items-center text-blue-600 font-semibold hover:text-blue-800 transition-colors">
+                View All
+                <i class="fas fa-arrow-right ml-2"></i>
+            </a>
         </div>
         
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6">
             <?php foreach ($featuredProducts as $product): ?>
                 <?php renderProductCard($product); ?>
             <?php endforeach; ?>
         </div>
         
-        <div class="text-center mt-8">
-            <a href="?page=products&featured=1" class="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition duration-300">
-                View All Featured Products
+        <div class="text-center mt-12 lg:hidden">
+            <a href="?page=products&featured=1" class="inline-flex items-center bg-gradient-to-r from-amber-500 to-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 transition-all duration-200 shadow-lg">
+                View All Featured
+                <i class="fas fa-arrow-right ml-2"></i>
             </a>
         </div>
     </div>
 </section>
 <?php endif; ?>
 
-<!-- Sale Products Section -->
+<!-- Hot Deals Section -->
 <?php if (!empty($saleProducts)): ?>
-<section class="py-16 bg-white">
+<section class="py-16 bg-gradient-to-br from-red-50 to-pink-50">
     <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-                <i class="fas fa-fire text-red-500 mr-2"></i>Hot Deals
-            </h2>
-            <p class="text-gray-600 text-lg">Limited time offers you can't miss</p>
+        <div class="flex items-center justify-between mb-12">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-2 flex items-center">
+                    <div class="bg-gradient-to-r from-red-500 to-pink-500 text-white p-2 rounded-xl mr-3">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    Hot Deals
+                </h2>
+                <p class="text-gray-600">Limited time offers you can't miss</p>
+            </div>
+            <a href="?page=products&sale=1" class="hidden lg:inline-flex items-center text-red-600 font-semibold hover:text-red-800 transition-colors">
+                View All
+                <i class="fas fa-arrow-right ml-2"></i>
+            </a>
         </div>
         
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6">
             <?php foreach ($saleProducts as $product): ?>
                 <?php renderProductCard($product); ?>
             <?php endforeach; ?>
         </div>
         
-        <div class="text-center mt-8">
-            <a href="?page=products&sale=1" class="bg-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition duration-300">
-                View All Sale Products
+        <div class="text-center mt-12 lg:hidden">
+            <a href="?page=products&sale=1" class="inline-flex items-center bg-gradient-to-r from-red-500 to-pink-500 text-white px-8 py-3 rounded-xl font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-200 shadow-lg">
+                Shop All Deals
+                <i class="fas fa-fire ml-2"></i>
             </a>
         </div>
     </div>
@@ -142,9 +160,20 @@ $saleProducts = $database->fetchAll("
 <!-- Latest Products Section -->
 <section class="py-16 bg-gray-50">
     <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Latest Arrivals</h2>
-            <p class="text-gray-600 text-lg">Discover the newest products</p>
+        <div class="flex items-center justify-between mb-12">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-2 flex items-center">
+                    <div class="bg-gradient-to-r from-green-500 to-teal-500 text-white p-2 rounded-xl mr-3">
+                        <i class="fas fa-sparkles"></i>
+                    </div>
+                    New Arrivals
+                </h2>
+                <p class="text-gray-600">Fresh products just landed</p>
+            </div>
+            <a href="?page=products" class="hidden lg:inline-flex items-center text-green-600 font-semibold hover:text-green-800 transition-colors">
+                View All
+                <i class="fas fa-arrow-right ml-2"></i>
+            </a>
         </div>
         
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6">
@@ -153,9 +182,10 @@ $saleProducts = $database->fetchAll("
             <?php endforeach; ?>
         </div>
         
-        <div class="text-center mt-8">
-            <a href="?page=products" class="bg-secondary text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition duration-300">
-                View All Products
+        <div class="text-center mt-12 lg:hidden">
+            <a href="?page=products" class="inline-flex items-center bg-gradient-to-r from-green-500 to-teal-500 text-white px-8 py-3 rounded-xl font-semibold hover:from-green-600 hover:to-teal-600 transition-all duration-200 shadow-lg">
+                Explore All Products
+                <i class="fas fa-arrow-right ml-2"></i>
             </a>
         </div>
     </div>
