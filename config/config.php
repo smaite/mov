@@ -1,0 +1,151 @@
+<?php
+// Global configuration for Sasto Hub
+
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Error reporting (disable in production)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Site configuration
+define('SITE_NAME', 'Sasto Hub');
+define('SITE_URL', 'http://localhost/mov');
+define('SITE_EMAIL', 'info@sastohub.com');
+
+// Directory paths
+define('ROOT_PATH', dirname(__DIR__));
+define('UPLOAD_PATH', ROOT_PATH . '/uploads');
+define('ASSETS_PATH', SITE_URL . '/assets');
+
+// Upload directories
+define('PRODUCT_IMAGES_PATH', '/uploads/products');
+define('USER_IMAGES_PATH', '/uploads/users');
+define('VENDOR_IMAGES_PATH', '/uploads/vendors');
+
+// Create upload directories if they don't exist
+$uploadDirs = [
+    ROOT_PATH . '/uploads',
+    ROOT_PATH . '/uploads/products',
+    ROOT_PATH . '/uploads/users',
+    ROOT_PATH . '/uploads/vendors'
+];
+
+foreach ($uploadDirs as $dir) {
+    if (!file_exists($dir)) {
+        mkdir($dir, 0755, true);
+    }
+}
+
+// Security settings
+define('PASSWORD_MIN_LENGTH', 6);
+define('SESSION_TIMEOUT', 3600); // 1 hour
+
+// Pagination
+define('PRODUCTS_PER_PAGE', 12);
+define('ORDERS_PER_PAGE', 10);
+
+// Image settings
+define('MAX_IMAGE_SIZE', 5 * 1024 * 1024); // 5MB
+define('ALLOWED_IMAGE_TYPES', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+// Include database configuration
+require_once ROOT_PATH . '/config/database.php';
+
+// Utility functions
+function sanitizeInput($data) {
+    return htmlspecialchars(strip_tags(trim($data)));
+}
+
+function redirectTo($url) {
+    header("Location: " . SITE_URL . $url);
+    exit();
+}
+
+function isLoggedIn() {
+    return isset($_SESSION['user_id']);
+}
+
+function getUserType() {
+    return $_SESSION['user_type'] ?? null;
+}
+
+function isAdmin() {
+    return getUserType() === 'admin';
+}
+
+function isVendor() {
+    return getUserType() === 'vendor';
+}
+
+function isCustomer() {
+    return getUserType() === 'customer';
+}
+
+function formatPrice($price) {
+    return 'Rs. ' . number_format($price, 2);
+}
+
+function generateSlug($text) {
+    $text = strtolower($text);
+    $text = preg_replace('/[^a-z0-9\s-]/', '', $text);
+    $text = preg_replace('/[\s-]+/', '-', $text);
+    return trim($text, '-');
+}
+
+function uploadImage($file, $directory, $allowedTypes = ALLOWED_IMAGE_TYPES) {
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return false;
+    }
+    
+    $fileSize = $file['size'];
+    $fileName = $file['name'];
+    $fileType = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    
+    // Check file size
+    if ($fileSize > MAX_IMAGE_SIZE) {
+        return false;
+    }
+    
+    // Check file type
+    if (!in_array($fileType, $allowedTypes)) {
+        return false;
+    }
+    
+    // Generate unique filename
+    $newFileName = uniqid() . '.' . $fileType;
+    $uploadPath = ROOT_PATH . $directory . '/' . $newFileName;
+    
+    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+        return $directory . '/' . $newFileName;
+    }
+    
+    return false;
+}
+
+function timeAgo($datetime) {
+    $time = time() - strtotime($datetime);
+    
+    if ($time < 60) return 'just now';
+    if ($time < 3600) return floor($time/60) . ' minutes ago';
+    if ($time < 86400) return floor($time/3600) . ' hours ago';
+    if ($time < 2592000) return floor($time/86400) . ' days ago';
+    if ($time < 31536000) return floor($time/2592000) . ' months ago';
+    
+    return floor($time/31536000) . ' years ago';
+}
+
+// CSRF Protection
+function generateCSRFToken() {
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function verifyCSRFToken($token) {
+    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+?>
