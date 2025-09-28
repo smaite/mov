@@ -15,6 +15,20 @@ if (!$vendor) {
     redirectTo('?page=register&type=vendor');
 }
 
+// Check if vendor is verified
+if ($_SESSION['status'] !== 'active') {
+    include __DIR__ . '/verification-pending.php';
+    return;
+}
+
+// Handle different vendor sections
+$section = $_GET['section'] ?? 'dashboard';
+
+if ($section === 'products') {
+    include __DIR__ . '/products.php';
+    return;
+}
+
 // Get vendor statistics
 $stats = [
     'total_products' => $database->count('products', 'vendor_id = ?', [$vendor['id']]),

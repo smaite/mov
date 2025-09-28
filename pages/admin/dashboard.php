@@ -10,6 +10,14 @@ if (!isAdmin()) {
 // Handle different admin sections
 $section = $_GET['section'] ?? 'dashboard';
 
+if ($section === 'vendors') {
+    include __DIR__ . '/vendors.php';
+    return;
+} elseif ($section === 'products') {
+    include __DIR__ . '/products.php';
+    return;
+}
+
 global $database;
 
 // Get dashboard statistics

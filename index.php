@@ -10,6 +10,7 @@ $validPages = [
     'home' => 'pages/home.php',
     'login' => 'pages/auth/login.php',
     'register' => 'pages/auth/register.php',
+    'vendor-register' => 'pages/auth/vendor-register.php',
     'logout' => 'pages/auth/logout.php',
     'products' => 'pages/products/index.php',
     'product' => 'pages/products/details.php',

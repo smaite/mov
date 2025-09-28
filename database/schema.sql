@@ -15,7 +15,7 @@ CREATE TABLE users (
     city VARCHAR(50),
     country VARCHAR(50),
     user_type ENUM('customer', 'vendor', 'admin') DEFAULT 'customer',
-    status ENUM('active', 'inactive', 'pending') DEFAULT 'active',
+    status ENUM('pending', 'active', 'inactive', 'rejected') DEFAULT 'pending',
     profile_image VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -68,7 +68,7 @@ CREATE TABLE products (
     min_stock_level INT DEFAULT 5,
     weight DECIMAL(8,2),
     dimensions VARCHAR(100),
-    status ENUM('active', 'inactive', 'draft') DEFAULT 'active',
+    status ENUM('pending', 'active', 'inactive', 'rejected') DEFAULT 'pending',
     featured BOOLEAN DEFAULT FALSE,
     rating DECIMAL(3,2) DEFAULT 0.00,
     total_reviews INT DEFAULT 0,

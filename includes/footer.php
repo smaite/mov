@@ -52,6 +52,13 @@
                         <li><a href="#" class="text-gray-300 hover:text-accent">Track Your Order</a></li>
                         <li><a href="#" class="text-gray-300 hover:text-accent">Privacy Policy</a></li>
                         <li><a href="#" class="text-gray-300 hover:text-accent">Terms of Service</a></li>
+                        <li class="pt-3 mt-3 border-t border-gray-600">
+                            <a href="?page=vendor-register" class="group relative text-orange-300 hover:text-orange-200 transition-all duration-200 flex items-center bg-gradient-to-r from-orange-500/20 to-red-500/20 px-4 py-2.5 rounded-lg border border-orange-500/30 hover:border-orange-400/50 hover:from-orange-500/30 hover:to-red-500/30">
+                                <i class="fas fa-store mr-3 text-orange-400 group-hover:scale-110 transition-transform duration-200"></i>
+                                <span class="font-semibold">Become a Vendor</span>
+                                <i class="fas fa-arrow-right ml-2 text-xs opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200"></i>
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
