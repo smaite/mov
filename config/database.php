@@ -64,19 +64,14 @@ class Database {
     public function update($table, $data, $where, $whereParams = []) {
         $setClause = [];
         foreach(array_keys($data) as $field) {
-            $setClause[] = "{$field} = :set_{$field}";
+            $setClause[] = "{$field} = ?";
         }
         
         $sql = "UPDATE {$table} SET " . implode(', ', $setClause) . " WHERE {$where}";
         
-        // Rename data keys to avoid conflicts with where params
-        $setParams = [];
-        foreach($data as $key => $value) {
-            $setParams["set_{$key}"] = $value;
-        }
-        
-        // Merge parameters - SET params use named placeholders, WHERE uses positional
-        $params = array_merge($setParams, $whereParams);
+        // Merge parameters: SET values first, then WHERE values
+        // All use positional (?) placeholders
+        $params = array_merge(array_values($data), $whereParams);
         
         $stmt = $this->query($sql, $params);
         // Return the number of affected rows (0 if no rows matched, false on error)
