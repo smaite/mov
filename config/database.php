@@ -64,7 +64,9 @@ class Database {
         $sql = "UPDATE {$table} SET " . implode(', ', $setClause) . " WHERE {$where}";
         $params = array_merge($data, $whereParams);
         
-        return $this->query($sql, $params);
+        $stmt = $this->query($sql, $params);
+        // Return the number of affected rows
+        return $stmt ? $stmt->rowCount() : false;
     }
     
     public function delete($table, $where, $params = []) {

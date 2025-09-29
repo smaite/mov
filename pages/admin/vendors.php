@@ -22,11 +22,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             if ($action === 'approve_vendor' && $userId > 0) {
-                $result = $database->update('users', ['status' => 'active'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
-                if ($result) {
-                    $success = '✅ Vendor approved successfully! Status changed to active.';
+                // First check if user exists
+                $userExists = $database->fetchOne("SELECT id, email, user_type, status FROM users WHERE id = ?", [$userId]);
+                
+                if (!$userExists) {
+                    $error = '❌ User not found with ID: ' . $userId;
+                } elseif ($userExists['user_type'] !== 'vendor') {
+                    $error = '❌ User ID ' . $userId . ' is not a vendor (type: ' . $userExists['user_type'] . ')';
                 } else {
-                    $error = '❌ Failed to approve vendor. User ID: ' . $userId;
+                    // Try to update
+                    $result = $database->update('users', ['status' => 'active'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
+                    
+                    if ($result !== false && $result > 0) {
+                        // Verify the update worked
+                        $updatedUser = $database->fetchOne("SELECT status FROM users WHERE id = ?", [$userId]);
+                        $success = '✅ Vendor approved successfully! 
+                                    <br><strong>Email:</strong> ' . htmlspecialchars($userExists['email']) . '
+                                    <br><strong>Status:</strong> ' . $userExists['status'] . ' → active
+                                    <br><strong>Rows updated:</strong> ' . $result;
+                    } elseif ($result === 0) {
+                        $error = '❌ No rows updated. User may already be active or conditions not met.
+                                  <br><strong>User ID:</strong> ' . $userId . '
+                                  <br><strong>Current status:</strong> ' . $userExists['status'] . '
+                                  <br><strong>User type:</strong> ' . $userExists['user_type'] . '
+                                  <br><strong>Email:</strong> ' . $userExists['email'];
+                    } else {
+                        $error = '❌ Database update returned false. Check database connection and query.';
+                    }
                 }
             } elseif ($action === 'reject_vendor' && $userId > 0) {
                 $result = $database->update('users', ['status' => 'rejected'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
