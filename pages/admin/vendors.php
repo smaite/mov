@@ -20,20 +20,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
         $userId = intval($_POST['user_id'] ?? 0);
         
-        if ($action === 'approve_vendor' && $userId > 0) {
-            $database->update('users', ['status' => 'active'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
-            $success = 'Vendor approved successfully!';
-        } elseif ($action === 'reject_vendor' && $userId > 0) {
-            $database->update('users', ['status' => 'rejected'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
-            $success = 'Vendor rejected';
-        } elseif ($action === 'suspend_vendor' && $userId > 0) {
-            $database->update('users', ['status' => 'inactive'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
-            $success = 'Vendor suspended';
-        } elseif ($action === 'reactivate_vendor' && $userId > 0) {
-            $database->update('users', ['status' => 'active'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
-            $success = 'Vendor reactivated';
+        try {
+            if ($action === 'approve_vendor' && $userId > 0) {
+                $result = $database->update('users', ['status' => 'active'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
+                if ($result) {
+                    $success = '✅ Vendor approved successfully! Status changed to active.';
+                } else {
+                    $error = '❌ Failed to approve vendor. User ID: ' . $userId;
+                }
+            } elseif ($action === 'reject_vendor' && $userId > 0) {
+                $result = $database->update('users', ['status' => 'rejected'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
+                if ($result) {
+                    $success = '✅ Vendor rejected successfully!';
+                } else {
+                    $error = '❌ Failed to reject vendor. User ID: ' . $userId;
+                }
+            } elseif ($action === 'suspend_vendor' && $userId > 0) {
+                $result = $database->update('users', ['status' => 'inactive'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
+                if ($result) {
+                    $success = '✅ Vendor suspended successfully!';
+                } else {
+                    $error = '❌ Failed to suspend vendor. User ID: ' . $userId;
+                }
+            } elseif ($action === 'reactivate_vendor' && $userId > 0) {
+                $result = $database->update('users', ['status' => 'active'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
+                if ($result) {
+                    $success = '✅ Vendor reactivated successfully!';
+                } else {
+                    $error = '❌ Failed to reactivate vendor. User ID: ' . $userId;
+                }
+            } else {
+                $error = '❌ Invalid action or user ID. Action: ' . htmlspecialchars($action) . ', User ID: ' . $userId;
+            }
+            
+            // Redirect to same page to prevent form resubmission
+            if ($success) {
+                $_SESSION['vendor_success'] = $success;
+                header('Location: ?page=admin&section=vendors&filter=' . $filter);
+                exit;
+            }
+        } catch (Exception $e) {
+            $error = '❌ Database error: ' . $e->getMessage();
         }
     }
+}
+
+// Check for success message from redirect
+if (isset($_SESSION['vendor_success'])) {
+    $success = $_SESSION['vendor_success'];
+    unset($_SESSION['vendor_success']);
 }
 
 // Get filter
@@ -138,14 +173,26 @@ $counts = [
                 </div>
 
                 <?php if ($success): ?>
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                        <?php echo htmlspecialchars($success); ?>
+                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-6 rounded-lg shadow-lg mb-6 animate-pulse">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-3xl mr-4"></i>
+                            <div>
+                                <p class="font-bold text-xl"><?php echo $success; ?></p>
+                                <p class="text-sm mt-1">The vendor status has been updated successfully.</p>
+                            </div>
+                        </div>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($error): ?>
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                        <?php echo htmlspecialchars($error); ?>
+                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-lg shadow-lg mb-6">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle text-3xl mr-4"></i>
+                            <div>
+                                <p class="font-bold text-xl"><?php echo $error; ?></p>
+                                <p class="text-sm mt-1">Please review the error and try again.</p>
+                            </div>
+                        </div>
                     </div>
                 <?php endif; ?>
 
@@ -276,22 +323,20 @@ $counts = [
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div class="flex items-center justify-end space-x-2">
                                                     <?php if ($vendor['status'] === 'pending'): ?>
-                                                        <form method="POST" class="inline">
+                                                        <form method="POST" class="inline" onsubmit="const btn = this.querySelector('button'); btn.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Processing...'; btn.disabled=true; return confirm('Approve <?php echo htmlspecialchars($vendor['shop_name']); ?> as a vendor?');">
                                                             <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                                                             <input type="hidden" name="action" value="approve_vendor">
                                                             <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
-                                                            <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600" 
-                                                                    onclick="return confirm('Approve this vendor?')">
-                                                                <i class="fas fa-check"></i> Approve
+                                                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105"> 
+                                                                <i class="fas fa-check mr-1"></i>Approve
                                                             </button>
                                                         </form>
-                                                        <form method="POST" class="inline">
+                                                        <form method="POST" class="inline ml-2" onsubmit="const btn = this.querySelector('button'); btn.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Processing...'; btn.disabled=true; return confirm('Reject <?php echo htmlspecialchars($vendor['shop_name']); ?>?');">
                                                             <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                                                             <input type="hidden" name="action" value="reject_vendor">
                                                             <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
-                                                            <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
-                                                                    onclick="return confirm('Reject this vendor?')">
-                                                                <i class="fas fa-times"></i> Reject
+                                                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                                                                <i class="fas fa-times mr-1"></i>Reject
                                                             </button>
                                                         </form>
                                                     <?php elseif ($vendor['status'] === 'active'): ?>
