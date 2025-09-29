@@ -31,7 +31,13 @@ class Database {
             $stmt->execute($params);
             return $stmt;
         } catch(PDOException $e) {
-            error_log("Database error: " . $e->getMessage());
+            // Log detailed error information
+            $errorMsg = "Database Error: " . $e->getMessage() . "\nSQL: " . $sql . "\nParams: " . json_encode($params);
+            error_log($errorMsg);
+            
+            // Store last error for debugging (only in development)
+            $_SESSION['last_db_error'] = $errorMsg;
+            
             return false;
         }
     }
@@ -58,15 +64,23 @@ class Database {
     public function update($table, $data, $where, $whereParams = []) {
         $setClause = [];
         foreach(array_keys($data) as $field) {
-            $setClause[] = "{$field} = :{$field}";
+            $setClause[] = "{$field} = :set_{$field}";
         }
         
         $sql = "UPDATE {$table} SET " . implode(', ', $setClause) . " WHERE {$where}";
-        $params = array_merge($data, $whereParams);
+        
+        // Rename data keys to avoid conflicts with where params
+        $setParams = [];
+        foreach($data as $key => $value) {
+            $setParams["set_{$key}"] = $value;
+        }
+        
+        // Merge parameters - SET params use named placeholders, WHERE uses positional
+        $params = array_merge($setParams, $whereParams);
         
         $stmt = $this->query($sql, $params);
-        // Return the number of affected rows
-        return $stmt ? $stmt->rowCount() : false;
+        // Return the number of affected rows (0 if no rows matched, false on error)
+        return $stmt !== false ? $stmt->rowCount() : false;
     }
     
     public function delete($table, $where, $params = []) {

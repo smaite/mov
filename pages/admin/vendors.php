@@ -48,6 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                   <br><strong>Email:</strong> ' . $userExists['email'];
                     } else {
                         $error = '❌ Database update returned false. Check database connection and query.';
+                        
+                        // Show detailed error if available
+                        if (isset($_SESSION['last_db_error'])) {
+                            $error .= '<br><br><strong>Debug Info:</strong><br><pre style="background:#f4f4f4;padding:10px;overflow:auto;font-size:11px;">' . 
+                                     htmlspecialchars($_SESSION['last_db_error']) . '</pre>';
+                            unset($_SESSION['last_db_error']);
+                        }
+                        
+                        $error .= '<br><br><strong>User Info:</strong> ID=' . $userId . ', Type=' . $userExists['user_type'] . ', Status=' . $userExists['status'] . ', Email=' . $userExists['email'];
                     }
                 }
             } elseif ($action === 'reject_vendor' && $userId > 0) {
