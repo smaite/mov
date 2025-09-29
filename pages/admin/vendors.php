@@ -12,6 +12,9 @@ global $database;
 $success = '';
 $error = '';
 
+// Get filter first (before any redirects)
+$filter = $_GET['filter'] ?? 'all';
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
@@ -87,8 +90,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Redirect to same page to prevent form resubmission
             if ($success) {
                 $_SESSION['vendor_success'] = $success;
-                header('Location: ?page=admin&section=vendors&filter=' . $filter);
-                exit;
+                // Use JavaScript redirect if headers already sent
+                if (!headers_sent()) {
+                    header('Location: ?page=admin&section=vendors&filter=' . urlencode($filter));
+                    exit;
+                } else {
+                    echo '<script>window.location.href = "?page=admin&section=vendors&filter=' . urlencode($filter) . '";</script>';
+                    echo '<noscript><meta http-equiv="refresh" content="0;url=?page=admin&section=vendors&filter=' . urlencode($filter) . '"></noscript>';
+                    exit;
+                }
             }
         } catch (Exception $e) {
             $error = '❌ Database error: ' . $e->getMessage();
@@ -96,14 +106,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Get filter first (needed for redirect)
+$filter = $_GET['filter'] ?? 'all';
+
 // Check for success message from redirect
 if (isset($_SESSION['vendor_success'])) {
     $success = $_SESSION['vendor_success'];
     unset($_SESSION['vendor_success']);
 }
-
-// Get filter
-$filter = $_GET['filter'] ?? 'all';
 $whereClause = "WHERE u.user_type = 'vendor'";
 $params = [];
 
