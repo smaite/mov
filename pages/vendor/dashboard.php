@@ -24,9 +24,19 @@ if (!isset($_SESSION['status']) || $_SESSION['status'] !== 'active') {
 // Handle different vendor sections
 $section = $_GET['section'] ?? 'dashboard';
 
-if ($section === 'products') {
-    include __DIR__ . '/products.php';
-    return;
+switch ($section) {
+    case 'products':
+        include __DIR__ . '/products.php';
+        return;
+    case 'orders':
+        include __DIR__ . '/orders.php';
+        return;
+    case 'analytics':
+        include __DIR__ . '/analytics.php';
+        return;
+    case 'profile':
+        include __DIR__ . '/profile.php';
+        return;
 }
 
 // Get vendor statistics
@@ -97,29 +107,31 @@ $lowStockProducts = $database->fetchAll("
                     </div>
                     <h3 class="text-white font-semibold"><?php echo htmlspecialchars($vendor['shop_name']); ?></h3>
                     <p class="text-gray-300 text-sm">
-                        <?php if ($vendor['is_verified']): ?>
+                        <?php if ($_SESSION['status'] === 'active' && $vendor['is_verified']): ?>
                             <i class="fas fa-check-circle text-green-400 mr-1"></i>Verified
+                        <?php elseif ($_SESSION['status'] === 'active'): ?>
+                            <i class="fas fa-check-circle text-blue-400 mr-1"></i>Active
                         <?php else: ?>
-                            <i class="fas fa-clock text-yellow-400 mr-1"></i>Pending
+                            <i class="fas fa-clock text-yellow-400 mr-1"></i><?php echo ucfirst($_SESSION['status']); ?>
                         <?php endif; ?>
                     </p>
                 </div>
             </div>
             
             <nav class="mt-6">
-                <a href="?page=vendor" class="flex items-center px-6 py-3 text-white bg-primary">
+                <a href="?page=vendor" class="flex items-center px-6 py-3 <?php echo $section === 'dashboard' ? 'text-white bg-primary' : 'text-gray-300 hover:text-white hover:bg-gray-700'; ?>">
                     <i class="fas fa-tachometer-alt mr-3"></i>Dashboard
                 </a>
-                <a href="?page=vendor&section=products" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
+                <a href="?page=vendor&section=products" class="flex items-center px-6 py-3 <?php echo $section === 'products' ? 'text-white bg-primary' : 'text-gray-300 hover:text-white hover:bg-gray-700'; ?>">
                     <i class="fas fa-box mr-3"></i>My Products
                 </a>
-                <a href="?page=vendor&section=orders" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
+                <a href="?page=vendor&section=orders" class="flex items-center px-6 py-3 <?php echo $section === 'orders' ? 'text-white bg-primary' : 'text-gray-300 hover:text-white hover:bg-gray-700'; ?>">
                     <i class="fas fa-shopping-cart mr-3"></i>Orders
                 </a>
-                <a href="?page=vendor&section=analytics" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
+                <a href="?page=vendor&section=analytics" class="flex items-center px-6 py-3 <?php echo $section === 'analytics' ? 'text-white bg-primary' : 'text-gray-300 hover:text-white hover:bg-gray-700'; ?>">
                     <i class="fas fa-chart-bar mr-3"></i>Analytics
                 </a>
-                <a href="?page=vendor&section=profile" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
+                <a href="?page=vendor&section=profile" class="flex items-center px-6 py-3 <?php echo $section === 'profile' ? 'text-white bg-primary' : 'text-gray-300 hover:text-white hover:bg-gray-700'; ?>">
                     <i class="fas fa-user mr-3"></i>Shop Profile
                 </a>
                 <a href="?page=logout" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
