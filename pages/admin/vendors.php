@@ -63,11 +63,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             } elseif ($action === 'reject_vendor' && $userId > 0) {
-                $result = $database->update('users', ['status' => 'rejected'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
-                if ($result) {
-                    $success = '✅ Vendor rejected successfully!';
+                $rejectionReason = trim($_POST['rejection_reason'] ?? '');
+                if (empty($rejectionReason)) {
+                    $error = '❌ Please provide a rejection reason';
                 } else {
-                    $error = '❌ Failed to reject vendor. User ID: ' . $userId;
+                    $result = $database->update('users', [
+                        'status' => 'rejected',
+                        'rejection_reason' => $rejectionReason
+                    ], 'id = ? AND user_type = ?', [$userId, 'vendor']);
+                    if ($result) {
+                        $success = '✅ Vendor rejected successfully!';
+                    } else {
+                        $error = '❌ Failed to reject vendor. User ID: ' . $userId;
+                    }
                 }
             } elseif ($action === 'suspend_vendor' && $userId > 0) {
                 $result = $database->update('users', ['status' => 'inactive'], 'id = ? AND user_type = ?', [$userId, 'vendor']);
@@ -136,7 +144,7 @@ switch ($filter) {
 $vendors = $database->fetchAll("
     SELECT u.*, v.shop_name, v.shop_description, v.phone, v.address,
            v.business_license, v.business_license_file, v.citizenship_file, v.pan_card_file,
-           v.other_documents, v.application_date, v.is_verified,
+           v.other_documents, v.application_date, u.rejection_reason,
            COALESCE((SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id), 0) as total_products,
            COALESCE((SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id AND p.status = 'active'), 0) as active_products
     FROM users u
@@ -189,11 +197,14 @@ $counts = [
                 <a href="?page=admin&section=products" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
                     <i class="fas fa-box mr-3"></i>Products
                 </a>
-                <a href="?page=admin&section=users" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
-                    <i class="fas fa-users mr-3"></i>Users
-                </a>
                 <a href="?page=admin&section=orders" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
                     <i class="fas fa-shopping-cart mr-3"></i>Orders
+                </a>
+                <a href="?page=admin&section=users" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
+                    <i class="fas fa-users mr-3"></i>Customers
+                </a>
+                <a href="?page=admin&section=settings" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
+                    <i class="fas fa-cog mr-3"></i>Settings
                 </a>
                 <a href="?page=logout" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
                     <i class="fas fa-sign-out-alt mr-3"></i>Logout
@@ -204,223 +215,272 @@ $counts = [
         <!-- Sidebar Overlay -->
         <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-50 z-40 lg:hidden hidden" onclick="toggleAdminSidebar()"></div>
 
-        <!-- Main Content -->
-        <div class="flex-1 lg:ml-0">
-            <div class="p-4 lg:p-8">
-                <!-- Header -->
-                <div class="mb-8">
-                    <h1 class="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Vendor Management</h1>
-                    <p class="text-gray-600">Manage vendor registrations and accounts</p>
-                </div>
-
-                <?php if ($success): ?>
-                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-6 rounded-lg shadow-lg mb-6 animate-pulse">
-                        <div class="flex items-center">
-                            <i class="fas fa-check-circle text-3xl mr-4"></i>
-                            <div>
-                                <p class="font-bold text-xl"><?php echo $success; ?></p>
-                                <p class="text-sm mt-1">The vendor status has been updated successfully.</p>
-                            </div>
+        <!-- Content Area -->
+        <div class="flex-1 p-4 lg:p-8">
+            <!-- Success/Error Messages -->
+            <?php if ($success): ?>
+                <div class="mb-6 bg-green-100 border-l-4 border-green-500 text-green-700 p-6 rounded-lg shadow-lg mb-6 animate-pulse">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-3xl mr-4"></i>
+                        <div>
+                            <p class="font-bold text-xl"><?php echo $success; ?></p>
+                            <p class="text-sm mt-1">The vendor status has been updated successfully.</p>
                         </div>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($error): ?>
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-lg shadow-lg mb-6">
-                        <div class="flex items-center">
-                            <i class="fas fa-exclamation-circle text-3xl mr-4"></i>
-                            <div>
-                                <p class="font-bold text-xl"><?php echo $error; ?></p>
-                                <p class="text-sm mt-1">Please review the error and try again.</p>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Filter Tabs -->
-                <div class="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
-                    <div class="flex flex-wrap border-b border-gray-200">
-                        <a href="?page=admin&section=vendors&filter=all" 
-                           class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                            All Vendors (<?php echo $counts['all']; ?>)
-                        </a>
-                        <a href="?page=admin&section=vendors&filter=pending" 
-                           class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'pending' ? 'border-yellow-500 text-yellow-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                            Pending (<?php echo $counts['pending']; ?>)
-                        </a>
-                        <a href="?page=admin&section=vendors&filter=active" 
-                           class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'active' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                            Active (<?php echo $counts['active']; ?>)
-                        </a>
-                        <a href="?page=admin&section=vendors&filter=inactive" 
-                           class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'inactive' ? 'border-gray-500 text-gray-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                            Suspended (<?php echo $counts['inactive']; ?>)
-                        </a>
-                        <a href="?page=admin&section=vendors&filter=rejected" 
-                           class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'rejected' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                            Rejected (<?php echo $counts['rejected']; ?>)
-                        </a>
                     </div>
                 </div>
+            <?php endif; ?>
 
-                <!-- Vendors List -->
-                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                    <?php if (empty($vendors)): ?>
-                        <div class="p-12 text-center">
-                            <i class="fas fa-store text-6xl text-gray-300 mb-4"></i>
-                            <h3 class="text-xl font-semibold text-gray-600 mb-2">No Vendors Found</h3>
-                            <p class="text-gray-500">No vendors match the current filter.</p>
+            <?php if ($error): ?>
+                <div class="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-lg shadow-lg mb-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle text-3xl mr-4"></i>
+                        <div>
+                            <p class="font-bold text-xl"><?php echo $error; ?></p>
+                            <p class="text-sm mt-1">Please review the error and try again.</p>
                         </div>
-                    <?php else: ?>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Vendor Management</h1>
+                <p class="text-gray-600">Manage vendor registrations and accounts</p>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
+                <div class="flex flex-wrap border-b border-gray-200">
+                    <a href="?page=admin&section=vendors&filter=all" 
+                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
+                        All Vendors (<?php echo $counts['all']; ?>)
+                    </a>
+                    <a href="?page=admin&section=vendors&filter=pending" 
+                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'pending' ? 'border-yellow-500 text-yellow-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
+                        Pending (<?php echo $counts['pending']; ?>)
+                    </a>
+                    <a href="?page=admin&section=vendors&filter=active" 
+                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'active' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
+                        Active (<?php echo $counts['active']; ?>)
+                    </a>
+                    <a href="?page=admin&section=vendors&filter=inactive" 
+                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'inactive' ? 'border-gray-500 text-gray-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
+                        Suspended (<?php echo $counts['inactive']; ?>)
+                    </a>
+                    <a href="?page=admin&section=vendors&filter=rejected" 
+                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'rejected' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
+                        Rejected (<?php echo $counts['rejected']; ?>)
+                    </a>
+                </div>
+            </div>
+
+            <!-- Vendors List -->
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <?php if (empty($vendors)): ?>
+                    <div class="p-12 text-center">
+                        <i class="fas fa-store text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Vendors Found</h3>
+                        <p class="text-gray-500">No vendors match the current filter.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shop</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <?php foreach ($vendors as $vendor): ?>
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shop Info</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                                    <?php if ($vendor['profile_image']): ?>
+                                                        <img src="<?php echo SITE_URL . '/' . $vendor['profile_image']; ?>" alt="Profile" class="h-10 w-10 rounded-full">
+                                                    <?php else: ?>
+                                                        <i class="fas fa-user text-gray-400"></i>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['first_name'] . ' ' . $vendor['last_name']); ?></div>
+                                                    <div class="text-sm text-gray-500"><?php echo htmlspecialchars($vendor['email']); ?></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div>
+                                                <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'No shop name'); ?></div>
+                                                <?php if ($vendor['shop_description']): ?>
+                                                    <div class="text-sm text-gray-500"><?php echo htmlspecialchars(substr($vendor['shop_description'], 0, 50) . '...'); ?></div>
+                                                <?php endif; ?>
+                                                <?php if ($vendor['address']): ?>
+                                                    <div class="text-xs text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i><?php echo htmlspecialchars($vendor['address']); ?></div>
+                                                <?php endif; ?>
+                                                <?php if ($vendor['business_license']): ?>
+                                                    <div class="text-xs text-blue-600"><i class="fas fa-certificate mr-1"></i>License: <?php echo htmlspecialchars($vendor['business_license']); ?></div>
+                                                <?php endif; ?>
+                                                <!-- Documents -->
+                                                <div class="mt-2 flex space-x-2">
+                                                    <?php if ($vendor['citizenship_file']): ?>
+                                                        <a href="<?php echo SITE_URL . $vendor['citizenship_file']; ?>" target="_blank" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                            <i class="fas fa-id-card mr-1"></i>Citizenship
+                                                        </a>
+                                                    <?php endif; ?>
+                                                    <?php if ($vendor['business_license_file']): ?>
+                                                        <a href="<?php echo SITE_URL . $vendor['business_license_file']; ?>" target="_blank" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                            <i class="fas fa-certificate mr-1"></i>License
+                                                        </a>
+                                                    <?php endif; ?>
+                                                    <?php if ($vendor['pan_card_file']): ?>
+                                                        <a href="<?php echo SITE_URL . $vendor['pan_card_file']; ?>" target="_blank" class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                                            <i class="fas fa-credit-card mr-1"></i>PAN
+                                                        </a>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-lg font-semibold"><?php echo $vendor['total_products']; ?></span>
+                                                <span class="text-gray-500">total</span>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-sm text-green-600 font-medium"><?php echo $vendor['active_products']; ?></span>
+                                                <span class="text-xs text-gray-400">active</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                                <?php 
+                                                switch($vendor['status']) {
+                                                    case 'active': echo 'bg-green-100 text-green-800'; break;
+                                                    case 'pending': echo 'bg-yellow-100 text-yellow-800'; break;
+                                                    case 'rejected': echo 'bg-red-100 text-red-800'; break;
+                                                    case 'inactive': echo 'bg-gray-100 text-gray-800'; break;
+                                                    default: echo 'bg-gray-100 text-gray-800';
+                                                }
+                                                ?>">
+                                                <?php echo ucfirst($vendor['status']); ?>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <?php echo date('M j, Y', strtotime($vendor['created_at'])); ?>
+                                            <div class="text-xs text-gray-500"><?php echo timeAgo($vendor['created_at']); ?></div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <div class="flex items-center justify-end space-x-2">
+                                                <?php if ($vendor['status'] === 'pending'): ?>
+                                                    <form method="POST" class="inline" onsubmit="const btn = this.querySelector('button'); btn.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Processing...'; btn.disabled=true; return confirm('Approve <?php echo htmlspecialchars($vendor['shop_name']); ?> as a vendor?');">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                                                        <input type="hidden" name="action" value="approve_vendor">
+                                                        <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
+                                                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105"> 
+                                                            <i class="fas fa-check mr-1"></i>Approve
+                                                        </button>
+                                                    </form>
+                                                    <button type="button" onclick="showRejectModal(<?php echo $vendor['id']; ?>, '<?php echo htmlspecialchars($vendor['shop_name'], ENT_QUOTES); ?>')" 
+                                                            class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 ml-2">
+                                                        <i class="fas fa-times mr-1"></i>Reject
+                                                    </button>
+                                                <?php elseif ($vendor['status'] === 'active'): ?>
+                                                    <form method="POST" class="inline">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                                                        <input type="hidden" name="action" value="suspend_vendor">
+                                                        <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
+                                                        <button type="submit" class="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600"
+                                                                onclick="return confirm('Suspend this vendor?')">
+                                                            <i class="fas fa-pause"></i> Suspend
+                                                        </button>
+                                                    </form>
+                                                <?php elseif ($vendor['status'] === 'inactive'): ?>
+                                                    <form method="POST" class="inline">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                                                        <input type="hidden" name="action" value="reactivate_vendor">
+                                                        <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
+                                                        <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
+                                                                onclick="return confirm('Reactivate this vendor?')">
+                                                            <i class="fas fa-play"></i> Activate
+                                                        </button>
+                                                    </form>
+                                                    <!-- Show rejection reason if rejected -->
+                                                    <?php if($vendor['status'] === 'rejected' && !empty($vendor['rejection_reason'])): ?>
+                                                        <div class="mt-2 bg-red-50 p-2 border border-red-100 rounded-md text-sm">
+                                                            <p class="font-medium text-gray-700">Rejection reason:</p>
+                                                            <p class="text-gray-600"><?php echo htmlspecialchars($vendor['rejection_reason']); ?></p>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <?php foreach ($vendors as $vendor): ?>
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="flex items-center">
-                                                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-lg mr-4">
-                                                        <i class="fas fa-store"></i>
-                                                    </div>
-                                                    <div>
-                                                        <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['first_name'] . ' ' . $vendor['last_name']); ?></div>
-                                                        <div class="text-sm text-gray-500"><?php echo htmlspecialchars($vendor['email']); ?></div>
-                                                        <?php if ($vendor['phone']): ?>
-                                                            <div class="text-xs text-gray-400"><?php echo htmlspecialchars($vendor['phone']); ?></div>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                <div>
-                                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'No shop name'); ?></div>
-                                                    <?php if ($vendor['shop_description']): ?>
-                                                        <div class="text-sm text-gray-500"><?php echo htmlspecialchars(substr($vendor['shop_description'], 0, 50) . '...'); ?></div>
-                                                    <?php endif; ?>
-                                                    <?php if ($vendor['address']): ?>
-                                                        <div class="text-xs text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i><?php echo htmlspecialchars($vendor['address']); ?></div>
-                                                    <?php endif; ?>
-                                                    <?php if ($vendor['business_license']): ?>
-                                                        <div class="text-xs text-blue-600"><i class="fas fa-certificate mr-1"></i>License: <?php echo htmlspecialchars($vendor['business_license']); ?></div>
-                                                    <?php endif; ?>
-                                                    <!-- Documents -->
-                                                    <div class="mt-2 flex space-x-2">
-                                                        <?php if ($vendor['citizenship_file']): ?>
-                                                            <a href="<?php echo SITE_URL . $vendor['citizenship_file']; ?>" target="_blank" class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                                                <i class="fas fa-id-card mr-1"></i>Citizenship
-                                                            </a>
-                                                        <?php endif; ?>
-                                                        <?php if ($vendor['business_license_file']): ?>
-                                                            <a href="<?php echo SITE_URL . $vendor['business_license_file']; ?>" target="_blank" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                                                <i class="fas fa-certificate mr-1"></i>License
-                                                            </a>
-                                                        <?php endif; ?>
-                                                        <?php if ($vendor['pan_card_file']): ?>
-                                                            <a href="<?php echo SITE_URL . $vendor['pan_card_file']; ?>" target="_blank" class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                                                <i class="fas fa-credit-card mr-1"></i>PAN
-                                                            </a>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-lg font-semibold"><?php echo $vendor['total_products']; ?></span>
-                                                    <span class="text-gray-500">total</span>
-                                                </div>
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-sm text-green-600 font-medium"><?php echo $vendor['active_products']; ?></span>
-                                                    <span class="text-xs text-gray-400">active</span>
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                                                    <?php 
-                                                    switch($vendor['status']) {
-                                                        case 'active': echo 'bg-green-100 text-green-800'; break;
-                                                        case 'pending': echo 'bg-yellow-100 text-yellow-800'; break;
-                                                        case 'rejected': echo 'bg-red-100 text-red-800'; break;
-                                                        case 'inactive': echo 'bg-gray-100 text-gray-800'; break;
-                                                        default: echo 'bg-gray-100 text-gray-800';
-                                                    }
-                                                    ?>">
-                                                    <?php echo ucfirst($vendor['status']); ?>
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                <?php echo date('M j, Y', strtotime($vendor['created_at'])); ?>
-                                                <div class="text-xs text-gray-500"><?php echo timeAgo($vendor['created_at']); ?></div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div class="flex items-center justify-end space-x-2">
-                                                    <?php if ($vendor['status'] === 'pending'): ?>
-                                                        <form method="POST" class="inline" onsubmit="const btn = this.querySelector('button'); btn.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Processing...'; btn.disabled=true; return confirm('Approve <?php echo htmlspecialchars($vendor['shop_name']); ?> as a vendor?');">
-                                                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                                                            <input type="hidden" name="action" value="approve_vendor">
-                                                            <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
-                                                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105"> 
-                                                                <i class="fas fa-check mr-1"></i>Approve
-                                                            </button>
-                                                        </form>
-                                                        <form method="POST" class="inline ml-2" onsubmit="const btn = this.querySelector('button'); btn.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Processing...'; btn.disabled=true; return confirm('Reject <?php echo htmlspecialchars($vendor['shop_name']); ?>?');">
-                                                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                                                            <input type="hidden" name="action" value="reject_vendor">
-                                                            <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
-                                                            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105">
-                                                                <i class="fas fa-times mr-1"></i>Reject
-                                                            </button>
-                                                        </form>
-                                                    <?php elseif ($vendor['status'] === 'active'): ?>
-                                                        <form method="POST" class="inline">
-                                                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                                                            <input type="hidden" name="action" value="suspend_vendor">
-                                                            <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
-                                                            <button type="submit" class="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600"
-                                                                    onclick="return confirm('Suspend this vendor?')">
-                                                                <i class="fas fa-pause"></i> Suspend
-                                                            </button>
-                                                        </form>
-                                                    <?php elseif ($vendor['status'] === 'inactive'): ?>
-                                                        <form method="POST" class="inline">
-                                                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                                                            <input type="hidden" name="action" value="reactivate_vendor">
-                                                            <input type="hidden" name="user_id" value="<?php echo $vendor['id']; ?>">
-                                                            <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
-                                                                    onclick="return confirm('Reactivate this vendor?')">
-                                                                <i class="fas fa-play"></i> Activate
-                                                            </button>
-                                                        </form>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-function toggleAdminSidebar() {
-    const sidebar = document.getElementById('admin-sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
+    function toggleAdminSidebar() {
+        const sidebar = document.getElementById('admin-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    // Rejection modal functionality
+    function showRejectModal(userId, shopName) {
+        document.getElementById('reject-vendor-id').value = userId;
+        document.getElementById('reject-vendor-name').textContent = shopName;
+        document.getElementById('rejection-modal').classList.remove('hidden');
+    }
     
-    sidebar.classList.toggle('-translate-x-full');
-    overlay.classList.toggle('hidden');
-}
+    function closeRejectModal() {
+        document.getElementById('rejection-modal').classList.add('hidden');
+        document.getElementById('rejection-reason').value = '';
+    }
 </script>
+
+<!-- Rejection Modal -->
+<div id="rejection-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Reject Vendor</h3>
+        <p class="mb-4">You are about to reject <strong id="reject-vendor-name"></strong>. Please provide a reason for rejection:</p>
+        
+        <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+            <input type="hidden" name="action" value="reject_vendor">
+            <input type="hidden" id="reject-vendor-id" name="user_id" value="">
+            
+            <div class="mb-4">
+                <label for="rejection-reason" class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason <span class="text-red-500">*</span></label>
+                <textarea id="rejection-reason" name="rejection_reason" rows="4" 
+                          class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-primary focus:border-transparent"
+                          placeholder="Example: Missing required documents" required></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeRejectModal()" 
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

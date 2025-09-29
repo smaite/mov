@@ -24,8 +24,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $database->update('products', ['status' => 'active'], 'id = ?', [$productId]);
             $success = 'Product approved successfully!';
         } elseif ($action === 'reject_product' && $productId > 0) {
-            $database->update('products', ['status' => 'rejected'], 'id = ?', [$productId]);
-            $success = 'Product rejected';
+            $rejectionReason = trim($_POST['rejection_reason'] ?? '');
+            if (empty($rejectionReason)) {
+                $error = '❌ Please provide a rejection reason';
+            } else {
+                $database->update('products', [
+                    'status' => 'rejected',
+                    'rejection_reason' => $rejectionReason
+                ], 'id = ?', [$productId]);
+                $success = '✅ Product rejected successfully!';
+            }
         } elseif ($action === 'suspend_product' && $productId > 0) {
             $database->update('products', ['status' => 'inactive'], 'id = ?', [$productId]);
             $success = 'Product suspended';
@@ -259,15 +267,10 @@ $counts = [
                                                 <i class="fas fa-check mr-1"></i>Approve
                                             </button>
                                         </form>
-                                        <form method="POST" class="flex-1">
-                                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                                            <input type="hidden" name="action" value="reject_product">
-                                            <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
-                                            <button type="submit" class="w-full bg-red-500 text-white px-3 py-2 rounded text-xs hover:bg-red-600 transition-colors"
-                                                    onclick="return confirm('Reject this product?')">
-                                                <i class="fas fa-times mr-1"></i>Reject
-                                            </button>
-                                        </form>
+                                        <button type="button" onclick="showRejectProductModal(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name'], ENT_QUOTES); ?>')" 
+                                                class="flex-1 bg-red-500 text-white px-3 py-2 rounded text-xs hover:bg-red-600 transition-colors">
+                                            <i class="fas fa-times mr-1"></i>Reject
+                                        </button>
                                     <?php elseif ($product['status'] === 'active'): ?>
                                         <form method="POST" class="w-full">
                                             <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
@@ -295,6 +298,12 @@ $counts = [
                                 <div class="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
                                     <div>Category: <?php echo htmlspecialchars($product['category_name'] ?: 'Uncategorized'); ?></div>
                                     <div>Added: <?php echo date('M j, Y', strtotime($product['created_at'])); ?></div>
+                                    <?php if ($product['status'] === 'rejected' && !empty($product['rejection_reason'])): ?>
+                                        <div class="mt-2 bg-red-50 p-2 border border-red-100 rounded-md">
+                                            <p class="font-medium text-red-700">Rejection reason:</p>
+                                            <p class="text-red-600"><?php echo htmlspecialchars($product['rejection_reason']); ?></p>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -321,4 +330,48 @@ function toggleAdminSidebar() {
     sidebar.classList.toggle('-translate-x-full');
     overlay.classList.toggle('hidden');
 }
+
+// Product rejection modal functions
+function showRejectProductModal(productId, productName) {
+    document.getElementById('reject-product-id').value = productId;
+    document.getElementById('reject-product-name').textContent = productName;
+    document.getElementById('product-rejection-modal').classList.remove('hidden');
+}
+
+function closeRejectProductModal() {
+    document.getElementById('product-rejection-modal').classList.add('hidden');
+    document.getElementById('product-rejection-reason').value = '';
+}
 </script>
+
+<!-- Product Rejection Modal -->
+<div id="product-rejection-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl mx-4">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Reject Product</h3>
+        <p class="mb-4">You are about to reject <strong id="reject-product-name"></strong>. Please provide a reason for rejection:</p>
+        
+        <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+            <input type="hidden" name="action" value="reject_product">
+            <input type="hidden" id="reject-product-id" name="product_id" value="">
+            
+            <div class="mb-4">
+                <label for="product-rejection-reason" class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason <span class="text-red-500">*</span></label>
+                <textarea id="product-rejection-reason" name="rejection_reason" rows="4" 
+                          class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-primary focus:border-transparent"
+                          placeholder="Example: Product does not meet quality standards, inappropriate content, etc." required></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeRejectProductModal()" 
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

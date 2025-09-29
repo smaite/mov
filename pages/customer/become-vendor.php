@@ -100,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'citizenship_file' => $citizenshipFile,
                 'pan_card_file' => $panCardFile,
                 'other_documents' => json_encode($otherDocuments),
-                'is_verified' => false,
                 'application_date' => date('Y-m-d H:i:s')
             ]);
             

@@ -16,6 +16,7 @@ CREATE TABLE users (
     country VARCHAR(50),
     user_type ENUM('customer', 'vendor', 'admin') DEFAULT 'customer',
     status ENUM('pending', 'active', 'inactive', 'rejected') DEFAULT 'pending',
+    rejection_reason TEXT,
     profile_image VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -39,7 +40,6 @@ CREATE TABLE vendors (
     commission_rate DECIMAL(5,2) DEFAULT 10.00,
     total_sales DECIMAL(12,2) DEFAULT 0.00,
     rating DECIMAL(3,2) DEFAULT 0.00,
-    is_verified BOOLEAN DEFAULT FALSE,
     application_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -77,6 +77,7 @@ CREATE TABLE products (
     weight DECIMAL(8,2),
     dimensions VARCHAR(100),
     status ENUM('pending', 'active', 'inactive', 'rejected') DEFAULT 'pending',
+    rejection_reason TEXT,
     featured BOOLEAN DEFAULT FALSE,
     rating DECIMAL(3,2) DEFAULT 0.00,
     total_reviews INT DEFAULT 0,

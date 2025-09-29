@@ -107,10 +107,8 @@ $lowStockProducts = $database->fetchAll("
                     </div>
                     <h3 class="text-white font-semibold"><?php echo htmlspecialchars($vendor['shop_name']); ?></h3>
                     <p class="text-gray-300 text-sm">
-                        <?php if ($_SESSION['status'] === 'active' && $vendor['is_verified']): ?>
-                            <i class="fas fa-check-circle text-green-400 mr-1"></i>Verified
-                        <?php elseif ($_SESSION['status'] === 'active'): ?>
-                            <i class="fas fa-check-circle text-blue-400 mr-1"></i>Active
+                        <?php if ($_SESSION['status'] === 'active'): ?>
+                            <i class="fas fa-check-circle text-green-400 mr-1"></i>Active
                         <?php else: ?>
                             <i class="fas fa-clock text-yellow-400 mr-1"></i><?php echo ucfirst($_SESSION['status']); ?>
                         <?php endif; ?>

@@ -113,9 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="flex items-center justify-between">
                         <h2 class="text-xl font-semibold text-gray-800">Shop Information</h2>
                         <div class="flex items-center space-x-2">
-                            <?php if ($vendor['is_verified']): ?>
+                            <?php if ($_SESSION['status'] === 'active'): ?>
                                 <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                    <i class="fas fa-check-circle mr-1"></i>Verified
+                                    <i class="fas fa-check-circle mr-1"></i>Active
                                 </span>
                             <?php else: ?>
                                 <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">

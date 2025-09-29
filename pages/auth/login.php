@@ -187,22 +187,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </p>
             </div>
 
-            <div class="mt-6">
-                <div class="relative">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-white text-gray-500">Want to become a vendor?</span>
-                    </div>
-                </div>
-                <div class="mt-3 text-center">
-                    <a href="?page=register&type=vendor" 
-                       class="text-secondary hover:text-opacity-80 font-semibold">
-                        Register as Vendor
-                    </a>
-                </div>
-            </div>
         </div>
 
         <!-- Quick Login for Demo -->

@@ -9,7 +9,7 @@ global $database;
 
 // Get product details
 $product = $database->fetchOne("
-    SELECT p.*, v.shop_name, v.is_verified, v.rating as vendor_rating,
+    SELECT p.*, v.shop_name, v.rating as vendor_rating,
            c.name as category_name, c.slug as category_slug
     FROM products p 
     LEFT JOIN vendors v ON p.vendor_id = v.id
@@ -206,9 +206,6 @@ $currentPrice = $product['sale_price'] && $product['sale_price'] < $product['pri
                             <p class="text-sm text-gray-600">Sold by</p>
                             <div class="flex items-center">
                                 <span class="font-semibold text-gray-800"><?php echo htmlspecialchars($product['shop_name']); ?></span>
-                                <?php if ($product['is_verified']): ?>
-                                    <i class="fas fa-check-circle text-green-500 ml-2" title="Verified Vendor"></i>
-                                <?php endif; ?>
                             </div>
                             <?php if ($product['vendor_rating'] > 0): ?>
                                 <div class="flex items-center mt-1">

@@ -64,7 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'phone' => $phone,
                         'address' => $address,
                         'business_license' => $businessLicense,
-                        'is_verified' => false,
                         'created_at' => date('Y-m-d H:i:s')
                     ]);
                     

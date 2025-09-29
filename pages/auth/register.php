@@ -83,8 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $vendorData = [
                         'user_id' => $userId,
                         'shop_name' => $shopName,
-                        'shop_description' => $shopDescription,
-                        'is_verified' => false
+                        'shop_description' => $shopDescription
                     ];
                     
                     $database->insert('vendors', $vendorData);

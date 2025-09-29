@@ -24,6 +24,15 @@ if ($_SESSION['status'] !== 'active') {
 $success = '';
 $error = '';
 
+// Get product statistics
+$stats = [
+    'total_products' => $database->count('products', 'vendor_id = ?', [$vendor['id']]),
+    'active_products' => $database->count('products', 'vendor_id = ? AND status = ?', [$vendor['id'], 'active']),
+    'pending_products' => $database->count('products', 'vendor_id = ? AND status = ?', [$vendor['id'], 'pending']),
+    'rejected_products' => $database->count('products', 'vendor_id = ? AND status = ?', [$vendor['id'], 'rejected']),
+    'low_stock' => $database->count('products', 'vendor_id = ? AND stock_quantity <= min_stock_level AND status = ?', [$vendor['id'], 'active'])
+];
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
@@ -184,6 +193,9 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                 </a>
                 <a href="?page=vendor&section=orders" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
                     <i class="fas fa-shopping-cart mr-3"></i>Orders
+                </a>
+                <a href="?page=vendor&section=analytics" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
+                    <i class="fas fa-chart-line mr-3"></i>Analytics
                 </a>
                 <a href="?page=vendor&section=profile" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
                     <i class="fas fa-user mr-3"></i>Shop Profile
@@ -405,18 +417,26 @@ if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
                                                     </span>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                                                        <?php 
-                                                        switch($product['status']) {
-                                                            case 'active': echo 'bg-green-100 text-green-800'; break;
-                                                            case 'pending': echo 'bg-yellow-100 text-yellow-800'; break;
-                                                            case 'rejected': echo 'bg-red-100 text-red-800'; break;
-                                                            case 'inactive': echo 'bg-gray-100 text-gray-800'; break;
-                                                            default: echo 'bg-gray-100 text-gray-800';
-                                                        }
-                                                        ?>">
-                                                        <?php echo ucfirst($product['status']); ?>
-                                                    </span>
+                                                    <div>
+                                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                                            <?php 
+                                                            switch($product['status']) {
+                                                                case 'active': echo 'bg-green-100 text-green-800'; break;
+                                                                case 'pending': echo 'bg-yellow-100 text-yellow-800'; break;
+                                                                case 'rejected': echo 'bg-red-100 text-red-800'; break;
+                                                                case 'inactive': echo 'bg-gray-100 text-gray-800'; break;
+                                                                default: echo 'bg-gray-100 text-gray-800';
+                                                            }
+                                                            ?>">
+                                                            <?php echo ucfirst($product['status']); ?>
+                                                        </span>
+                                                        <?php if ($product['status'] === 'rejected' && !empty($product['rejection_reason'])): ?>
+                                                            <div class="mt-2 bg-red-50 p-2 rounded text-xs text-red-700 max-w-xs">
+                                                                <p class="font-medium">Reason:</p>
+                                                                <p><?php echo htmlspecialchars($product['rejection_reason']); ?></p>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <div class="flex items-center justify-end space-x-2">
