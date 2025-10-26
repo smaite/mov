@@ -190,14 +190,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <!-- Quick Login for Demo -->
-        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <!-- <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 class="text-sm font-semibold text-blue-800 mb-2">Demo Accounts:</h3>
             <div class="text-xs text-blue-700 space-y-1">
                 <p><strong>Admin:</strong> admin@sastohub.com / password</p>
                 <p><strong>Customer:</strong> customer@test.com / password</p>
                 <p><strong>Vendor:</strong> vendor@test.com / password</p>
             </div>
-        </div>
+        </div> -->
     </div>
 
     <script>

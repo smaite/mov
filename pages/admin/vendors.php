@@ -12,7 +12,7 @@ global $database;
 $success = '';
 $error = '';
 
-// Get filter first (before any redirects)
+// Get filter first (before any redirects) - default to 'all' to show all vendors
 $filter = $_GET['filter'] ?? 'all';
 
 // Handle form submissions
@@ -122,27 +122,22 @@ if (isset($_SESSION['vendor_success'])) {
     $success = $_SESSION['vendor_success'];
     unset($_SESSION['vendor_success']);
 }
-$whereClause = "WHERE u.user_type = 'vendor'";
-$params = [];
-
-switch ($filter) {
-    case 'pending':
-        $whereClause .= " AND u.status = 'pending'";
-        break;
-    case 'active':
-        $whereClause .= " AND u.status = 'active'";
-        break;
-    case 'rejected':
-        $whereClause .= " AND u.status = 'rejected'";
-        break;
-    case 'inactive':
-        $whereClause .= " AND u.status = 'inactive'";
-        break;
+// Build WHERE clause - ONLY filter by status if not 'all'
+if ($filter === 'all') {
+    $whereClause = "WHERE u.user_type = 'vendor'";
+} else {
+    $whereClause = "WHERE u.user_type = 'vendor' AND u.status = ?";
+    $params = [$filter];
 }
 
-// Get vendors
+// Override params if filter is 'all'
+if ($filter === 'all') {
+    $params = [];
+}
+
+// Get vendors - using LEFT JOIN to show all vendor users even without complete profiles
 $vendors = $database->fetchAll("
-    SELECT u.*, v.shop_name, v.shop_description, v.phone, v.address,
+    SELECT u.*, v.id as vendor_id, v.shop_name, v.shop_description, v.phone as vendor_phone, v.address as vendor_address,
            v.business_license, v.business_license_file, v.citizenship_file, v.pan_card_file,
            v.other_documents, v.application_date, u.rejection_reason,
            COALESCE((SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id), 0) as total_products,
@@ -251,8 +246,8 @@ $counts = [
             <!-- Filter Tabs -->
             <div class="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
                 <div class="flex flex-wrap border-b border-gray-200">
-                    <a href="?page=admin&section=vendors&filter=all" 
-                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
+                    <a href="?page=admin&section=vendors" 
+                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'all' ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
                         All Vendors (<?php echo $counts['all']; ?>)
                     </a>
                     <a href="?page=admin&section=vendors&filter=pending" 
@@ -281,6 +276,11 @@ $counts = [
                         <i class="fas fa-store text-6xl text-gray-300 mb-4"></i>
                         <h3 class="text-xl font-semibold text-gray-600 mb-2">No Vendors Found</h3>
                         <p class="text-gray-500">No vendors match the current filter.</p>
+                        <div class="mt-6">
+                            <a href="?page=admin&section=vendors&filter=all" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-list mr-2"></i>View All Vendors
+                            </a>
+                        </div>
                     </div>
                 <?php else: ?>
                     <div class="overflow-x-auto">
@@ -315,12 +315,19 @@ $counts = [
                                         </td>
                                         <td class="px-6 py-4">
                                             <div>
-                                                <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'No shop name'); ?></div>
+                                                <?php if ($vendor['vendor_id']): ?>
+                                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'No shop name'); ?></div>
+                                                <?php else: ?>
+                                                    <div class="text-sm font-medium text-orange-600">
+                                                        <i class="fas fa-exclamation-triangle mr-1"></i>Incomplete Profile
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">No vendor details submitted</div>
+                                                <?php endif; ?>
                                                 <?php if ($vendor['shop_description']): ?>
                                                     <div class="text-sm text-gray-500"><?php echo htmlspecialchars(substr($vendor['shop_description'], 0, 50) . '...'); ?></div>
                                                 <?php endif; ?>
-                                                <?php if ($vendor['address']): ?>
-                                                    <div class="text-xs text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i><?php echo htmlspecialchars($vendor['address']); ?></div>
+                                                <?php if ($vendor['vendor_address']): ?>
+                                                    <div class="text-xs text-gray-400"><i class="fas fa-map-marker-alt mr-1"></i><?php echo htmlspecialchars($vendor['vendor_address']); ?></div>
                                                 <?php endif; ?>
                                                 <?php if ($vendor['business_license']): ?>
                                                     <div class="text-xs text-blue-600"><i class="fas fa-certificate mr-1"></i>License: <?php echo htmlspecialchars($vendor['business_license']); ?></div>
@@ -375,6 +382,12 @@ $counts = [
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="flex items-center justify-end space-x-2">
+                                                <!-- View Details Button -->
+                                                <button type="button" onclick="showVendorDetails(<?php echo htmlspecialchars(json_encode($vendor)); ?>)" 
+                                                        class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">
+                                                    <i class="fas fa-eye mr-1"></i>Details
+                                                </button>
+                                                
                                                 <?php if ($vendor['status'] === 'pending'): ?>
                                                     <form method="POST" class="inline" onsubmit="const btn = this.querySelector('button'); btn.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Processing...'; btn.disabled=true; return confirm('Approve <?php echo htmlspecialchars($vendor['shop_name']); ?> as a vendor?');">
                                                         <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
@@ -449,6 +462,70 @@ $counts = [
         document.getElementById('rejection-modal').classList.add('hidden');
         document.getElementById('rejection-reason').value = '';
     }
+    
+    // Vendor details modal
+    function showVendorDetails(vendor) {
+        const modal = document.getElementById('vendor-details-modal');
+        
+        // Populate modal with vendor data
+        document.getElementById('detail-name').textContent = vendor.first_name + ' ' + vendor.last_name;
+        document.getElementById('detail-email').textContent = vendor.email;
+        document.getElementById('detail-phone').textContent = vendor.phone || 'N/A';
+        document.getElementById('detail-user-address').textContent = vendor.address || 'N/A';
+        
+        document.getElementById('detail-shop-name').textContent = vendor.shop_name || 'N/A';
+        document.getElementById('detail-shop-desc').textContent = vendor.shop_description || 'N/A';
+        document.getElementById('detail-vendor-phone').textContent = vendor.vendor_phone || 'N/A';
+        document.getElementById('detail-vendor-address').textContent = vendor.vendor_address || 'N/A';
+        document.getElementById('detail-license').textContent = vendor.business_license || 'N/A';
+        
+        document.getElementById('detail-status').textContent = vendor.status.charAt(0).toUpperCase() + vendor.status.slice(1);
+        document.getElementById('detail-status').className = 'inline-flex px-3 py-1 text-sm font-semibold rounded-full ' + 
+            (vendor.status === 'active' ? 'bg-green-100 text-green-800' : 
+             vendor.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+             vendor.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800');
+        
+        document.getElementById('detail-date').textContent = new Date(vendor.created_at).toLocaleDateString();
+        document.getElementById('detail-products').textContent = vendor.total_products;
+        
+        // Documents
+        const docsContainer = document.getElementById('detail-documents');
+        docsContainer.innerHTML = '';
+        
+        if (vendor.business_license_file) {
+            docsContainer.innerHTML += `<a href="${vendor.business_license_file}" target="_blank" class="inline-flex items-center bg-blue-100 text-blue-800 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors mr-2 mb-2">
+                <i class="fas fa-file-certificate mr-2"></i>Business License
+            </a>`;
+        }
+        if (vendor.citizenship_file) {
+            docsContainer.innerHTML += `<a href="${vendor.citizenship_file}" target="_blank" class="inline-flex items-center bg-green-100 text-green-800 px-3 py-2 rounded-lg hover:bg-green-200 transition-colors mr-2 mb-2">
+                <i class="fas fa-id-card mr-2"></i>Citizenship
+            </a>`;
+        }
+        if (vendor.pan_card_file) {
+            docsContainer.innerHTML += `<a href="${vendor.pan_card_file}" target="_blank" class="inline-flex items-center bg-purple-100 text-purple-800 px-3 py-2 rounded-lg hover:bg-purple-200 transition-colors mr-2 mb-2">
+                <i class="fas fa-credit-card mr-2"></i>PAN Card
+            </a>`;
+        }
+        if (!vendor.business_license_file && !vendor.citizenship_file && !vendor.pan_card_file) {
+            docsContainer.innerHTML = '<span class="text-gray-500">No documents uploaded</span>';
+        }
+        
+        // Rejection reason
+        const rejectionSection = document.getElementById('detail-rejection-section');
+        if (vendor.status === 'rejected' && vendor.rejection_reason) {
+            rejectionSection.classList.remove('hidden');
+            document.getElementById('detail-rejection-reason').textContent = vendor.rejection_reason;
+        } else {
+            rejectionSection.classList.add('hidden');
+        }
+        
+        modal.classList.remove('hidden');
+    }
+    
+    function closeVendorDetails() {
+        document.getElementById('vendor-details-modal').classList.add('hidden');
+    }
 </script>
 
 <!-- Rejection Modal -->
@@ -480,6 +557,124 @@ $counts = [
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Vendor Details Modal -->
+<div id="vendor-details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden overflow-y-auto p-4">
+    <div class="bg-white rounded-lg max-w-4xl w-full shadow-2xl my-8">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between rounded-t-lg">
+            <h3 class="text-xl font-bold text-white">Vendor Details</h3>
+            <button onclick="closeVendorDetails()" class="text-white hover:text-gray-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Personal Information -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user text-blue-600 mr-2"></i>Personal Information
+                    </h4>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Full Name</p>
+                            <p id="detail-name" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Email</p>
+                            <p id="detail-email" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Phone</p>
+                            <p id="detail-phone" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Address</p>
+                            <p id="detail-user-address" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Business Information -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-store text-orange-600 mr-2"></i>Business Information
+                    </h4>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Shop Name</p>
+                            <p id="detail-shop-name" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Description</p>
+                            <p id="detail-shop-desc" class="text-sm text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Business Phone</p>
+                            <p id="detail-vendor-phone" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Business Address</p>
+                            <p id="detail-vendor-address" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Business License</p>
+                            <p id="detail-license" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status & Stats -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-chart-bar text-green-600 mr-2"></i>Status & Statistics
+                    </h4>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Status</p>
+                            <span id="detail-status" class="inline-flex px-3 py-1 text-sm font-semibold rounded-full"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Registration Date</p>
+                            <p id="detail-date" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 uppercase">Total Products</p>
+                            <p id="detail-products" class="text-sm font-medium text-gray-900"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Documents -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-file-alt text-purple-600 mr-2"></i>Uploaded Documents
+                    </h4>
+                    <div id="detail-documents" class="flex flex-wrap gap-2">
+                        <!-- Documents will be populated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rejection Reason (if rejected) -->
+            <div id="detail-rejection-section" class="mt-6 bg-red-50 border-l-4 border-red-500 p-4 rounded hidden">
+                <h4 class="text-lg font-semibold text-red-800 mb-2 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Rejection Reason
+                </h4>
+                <p id="detail-rejection-reason" class="text-red-700"></p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="border-t border-gray-200 px-6 py-4 flex justify-end">
+            <button onclick="closeVendorDetails()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                Close
+            </button>
+        </div>
     </div>
 </div>
 </body>

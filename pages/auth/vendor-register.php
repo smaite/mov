@@ -29,6 +29,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $address = trim($_POST['address'] ?? '');
         $businessLicense = trim($_POST['business_license'] ?? '');
         
+        // Handle file upload
+        $businessRegDoc = null;
+        if (isset($_FILES['business_reg_doc']) && $_FILES['business_reg_doc']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = 'uploads/vendor_documents/';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            $fileExtension = strtolower(pathinfo($_FILES['business_reg_doc']['name'], PATHINFO_EXTENSION));
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'];
+            
+            if (in_array($fileExtension, $allowedExtensions)) {
+                $fileName = 'business_reg_' . uniqid() . '.' . $fileExtension;
+                $targetPath = $uploadDir . $fileName;
+                
+                if (move_uploaded_file($_FILES['business_reg_doc']['tmp_name'], $targetPath)) {
+                    $businessRegDoc = $targetPath;
+                }
+            } else {
+                $error = 'Invalid file type. Please upload JPG, PNG, PDF, or DOC files only.';
+            }
+        }
+        
         // Validate user data
         if (empty($firstName) || empty($lastName) || !$email || empty($password)) {
             $error = 'Please fill all required fields';
@@ -57,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($userId) {
                     // Create vendor profile
-                    $vendorId = $database->insert('vendors', [
+                    $vendorData = [
                         'user_id' => $userId,
                         'shop_name' => $shopName,
                         'shop_description' => $shopDescription,
@@ -65,7 +88,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'address' => $address,
                         'business_license' => $businessLicense,
                         'created_at' => date('Y-m-d H:i:s')
-                    ]);
+                    ];
+                    
+                    if ($businessRegDoc) {
+                        $vendorData['business_license_file'] = $businessRegDoc;
+                    }
+                    
+                    $vendorId = $database->insert('vendors', $vendorData);
                     
                     if ($vendorId) {
                         $success = 'Your vendor application has been submitted successfully! We will review your application and notify you within 24-48 hours.';
@@ -160,7 +189,7 @@ $categories = $database->fetchAll("SELECT * FROM categories WHERE parent_id IS N
                             </div>
                         <?php endif; ?>
                         
-                        <form method="POST" class="space-y-8">
+                        <form method="POST" enctype="multipart/form-data" class="space-y-8">
                             <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
                             
                             <!-- Personal Information -->
@@ -245,19 +274,44 @@ $categories = $database->fetchAll("SELECT * FROM categories WHERE parent_id IS N
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Business Address</label>
-                                            <input type="text" name="address"
+                                            <input type="text" name="address" required
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                                    value="<?php echo htmlspecialchars($_POST['address'] ?? ''); ?>"
                                                    placeholder="Your business address">
                                         </div>
                                         
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Business License (Optional)</label>
-                                            <input type="text" name="business_license"
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Business License Number</label>
+                                            <input type="text" name="business_license" required
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                                    value="<?php echo htmlspecialchars($_POST['business_license'] ?? ''); ?>"
                                                    placeholder="License number (if applicable)">
                                         </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Business Registration Document
+                                            <span class="text-gray-500 text-xs font-normal"></span>
+                                        </label>
+                                        <div class="relative">
+                                            <input type="file" name="business_reg_doc" id="business_reg_doc" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                                                   class="hidden" onchange="updateFileName(this)">
+                                            <label for="business_reg_doc" class="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-500 transition-colors">
+                                                <div class="text-center">
+                                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                                    <p class="text-sm text-gray-600">
+                                                        <span class="font-medium text-orange-500">Click to upload</span> or drag and drop
+                                                    </p>
+                                                    <p class="text-xs text-gray-500 mt-1">PDF, DOC, PNG, JPG (MAX. 5MB)</p>
+                                                    <p id="file-name" class="text-sm text-green-600 font-medium mt-2 hidden"></p>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <p class="mt-2 text-xs text-gray-500">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            Upload your business registration certificate, trade license, or any official business document
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -295,3 +349,25 @@ $categories = $database->fetchAll("SELECT * FROM categories WHERE parent_id IS N
         </div>
     </div>
 </div>
+
+<script>
+function updateFileName(input) {
+    const fileNameDisplay = document.getElementById('file-name');
+    if (input.files && input.files[0]) {
+        const fileName = input.files[0].name;
+        const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2); // Convert to MB
+        
+        if (input.files[0].size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            input.value = '';
+            fileNameDisplay.classList.add('hidden');
+            return;
+        }
+        
+        fileNameDisplay.textContent = `✓ ${fileName} (${fileSize} MB)`;
+        fileNameDisplay.classList.remove('hidden');
+    } else {
+        fileNameDisplay.classList.add('hidden');
+    }
+}
+</script>
