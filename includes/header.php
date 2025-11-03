@@ -7,10 +7,10 @@
     <meta name="description" content="<?php echo isset($pageDescription) ? $pageDescription : 'Shop the best products at the lowest prices'; ?>">
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="assets\js\tailwind.js"></script>
     
     <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> 
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?php echo ASSETS_PATH; ?>/css/style.css">

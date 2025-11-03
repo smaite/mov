@@ -93,20 +93,26 @@ $counts = [
 ];
 ?>
 
-<div class="min-h-screen bg-gray-50">
+<!-- Dashboard Container with proper spacing for header -->
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" style="padding-top: 80px;">
     <!-- Mobile Header -->
-    <div class="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+    <div class="lg:hidden fixed top-16 left-0 right-0 bg-white shadow-lg border-b px-4 py-4 z-30">
         <div class="flex items-center justify-between">
-            <h1 class="text-xl font-bold text-gray-800">Product Management</h1>
-            <button onclick="toggleAdminSidebar()" class="text-gray-600 hover:text-gray-800">
-                <i class="fas fa-bars text-xl"></i>
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-box text-white text-sm"></i>
+                </div>
+                <h1 class="text-xl font-bold text-gray-800">Product Management</h1>
+            </div>
+            <button onclick="toggleAdminSidebar()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+                <i class="fas fa-bars text-gray-600"></i>
             </button>
         </div>
     </div>
 
     <div class="flex">
-        <!-- Admin Sidebar -->
-        <div id="admin-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-secondary transform -translate-x-full transition-transform lg:translate-x-0 lg:static lg:inset-0">
+        <!-- Modern Admin Sidebar -->
+        <div id="admin-sidebar" class="fixed top-16 bottom-0 left-0 z-20 w-72 bg-white shadow-2xl transform -translate-x-full transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-auto border-r border-gray-200">
             <div class="flex items-center justify-between p-6 border-b border-gray-600">
                 <h2 class="text-xl font-bold text-white">Admin Panel</h2>
                 <button onclick="toggleAdminSidebar()" class="lg:hidden text-white hover:text-gray-300">

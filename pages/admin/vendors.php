@@ -122,31 +122,56 @@ if (isset($_SESSION['vendor_success'])) {
     $success = $_SESSION['vendor_success'];
     unset($_SESSION['vendor_success']);
 }
-// Build WHERE clause - ONLY filter by status if not 'all'
+// Build query based on filter
+$params = [];
 if ($filter === 'all') {
-    $whereClause = "WHERE u.user_type = 'vendor'";
+$whereClause = "WHERE u.user_type = 'vendor'";
 } else {
-    $whereClause = "WHERE u.user_type = 'vendor' AND u.status = ?";
-    $params = [$filter];
+    $whereClause = "WHERE u.user_type = 'vendor' AND u.status = '{$filter}'";
 }
 
-// Override params if filter is 'all'
-if ($filter === 'all') {
-    $params = [];
-}
-
-// Get vendors - using LEFT JOIN to show all vendor users even without complete profiles
-$vendors = $database->fetchAll("
-    SELECT u.*, v.id as vendor_id, v.shop_name, v.shop_description, v.phone as vendor_phone, v.address as vendor_address,
-           v.business_license, v.business_license_file, v.citizenship_file, v.pan_card_file,
-           v.other_documents, v.application_date, u.rejection_reason,
-           COALESCE((SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id), 0) as total_products,
-           COALESCE((SELECT COUNT(*) FROM products p WHERE p.vendor_id = v.id AND p.status = 'active'), 0) as active_products
+// Get ALL vendors - FIXED: removed u.rejection_reason which doesn't exist
+$sql = "SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone, u.address, u.user_type, u.status, u.profile_image, u.created_at, u.updated_at,
+       v.id as vendor_id, 
+       v.shop_name, 
+       v.shop_description, 
+       v.phone as vendor_phone, 
+       v.address as vendor_address,
+       v.business_license, 
+       v.business_license_file, 
+       v.citizenship_file, 
+       v.pan_card_file,
+       v.other_documents, 
+       v.application_date
     FROM users u
     LEFT JOIN vendors v ON u.id = v.user_id
     {$whereClause}
-    ORDER BY u.created_at DESC
-", $params);
+ORDER BY u.created_at DESC";
+
+// Try direct PDO query to bypass any issues
+try {
+    $pdo = $database->getConnection();
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute();
+    $vendors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Add product counts and fake rejection_reason for now
+    if (!empty($vendors)) {
+        foreach ($vendors as &$vendor) {
+            $vendor['rejection_reason'] = null; // Add this since it doesn't exist in DB
+            if ($vendor['vendor_id']) {
+                $vendor['total_products'] = $database->count('products', 'vendor_id = ?', [$vendor['vendor_id']]);
+                $vendor['active_products'] = $database->count('products', 'vendor_id = ? AND status = ?', [$vendor['vendor_id'], 'active']);
+            } else {
+                $vendor['total_products'] = 0;
+                $vendor['active_products'] = 0;
+            }
+        }
+    }
+} catch (PDOException $e) {
+    $vendors = [];
+    $error = "PDO Error: " . $e->getMessage();
+}
 
 // Get counts for filters
 $counts = [
@@ -158,60 +183,116 @@ $counts = [
 ];
 ?>
 
-<div class="min-h-screen bg-gray-50">
+<!-- Dashboard Container with proper spacing for header -->
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100" style="padding-top: 80px;">
+    
     <!-- Mobile Header -->
-    <div class="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+    <div class="lg:hidden fixed top-16 left-0 right-0 bg-white shadow-lg border-b px-4 py-4 z-30">
         <div class="flex items-center justify-between">
-            <h1 class="text-xl font-bold text-gray-800">Vendor Management</h1>
-            <button onclick="toggleAdminSidebar()" class="text-gray-600 hover:text-gray-800">
-                <i class="fas fa-bars text-xl"></i>
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-user-shield text-white text-sm"></i>
+                </div>
+                <h1 class="text-xl font-bold text-gray-800">Admin Panel</h1>
+            </div>
+            <button onclick="toggleAdminSidebar()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+                <i class="fas fa-bars text-gray-600"></i>
             </button>
         </div>
     </div>
 
     <div class="flex">
-        <!-- Admin Sidebar -->
-        <div id="admin-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-secondary transform -translate-x-full transition-transform lg:translate-x-0 lg:static lg:inset-0">
-            <div class="flex items-center justify-between p-6 border-b border-gray-600">
-                <h2 class="text-xl font-bold text-white">Admin Panel</h2>
-                <button onclick="toggleAdminSidebar()" class="lg:hidden text-white hover:text-gray-300">
-                    <i class="fas fa-times"></i>
+        <!-- Modern Admin Sidebar -->
+        <div id="admin-sidebar" class="fixed top-16 bottom-0 left-0 z-20 w-72 bg-white shadow-2xl transform -translate-x-full transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-auto border-r border-gray-200">
+            
+            <!-- Sidebar Header -->
+            <div class="p-6 bg-gradient-to-r from-blue-600 to-indigo-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-user-shield text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white">Admin Panel</h2>
+                            <p class="text-blue-100 text-sm">Management Dashboard</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleAdminSidebar()" class="lg:hidden p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+                        <i class="fas fa-times text-white"></i>
                 </button>
             </div>
+            </div>
             
-            <nav class="mt-6">
-                <div class="px-6 py-3">
-                    <span class="text-xs uppercase text-gray-400 font-semibold">Main</span>
+            <!-- Navigation Menu -->
+            <nav class="p-4 space-y-2">
+                <div class="px-3 py-2">
+                    <span class="text-xs uppercase text-gray-500 font-semibold tracking-wider">Dashboard</span>
                 </div>
-                <a href="?page=admin" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
-                    <i class="fas fa-tachometer-alt mr-3"></i>Dashboard
+                
+                <a href="?page=admin" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mr-3 transition-colors">
+                        <i class="fas fa-tachometer-alt text-sm"></i>
+                </div>
+                    <span class="font-medium">Overview</span>
                 </a>
-                <a href="?page=admin&section=vendors" class="flex items-center px-6 py-3 text-white bg-primary">
-                    <i class="fas fa-store mr-3"></i>Vendors
+                
+                <a href="?page=admin&section=vendors" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
+                    <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center mr-3">
+                        <i class="fas fa-store text-sm"></i>
+                    </div>
+                    <span class="font-medium">Vendors</span>
+                    <div class="ml-auto w-2 h-2 bg-white rounded-full"></div>
                 </a>
-                <a href="?page=admin&section=products" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
-                    <i class="fas fa-box mr-3"></i>Products
+                
+                <a href="?page=admin&section=products" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mr-3 transition-colors">
+                        <i class="fas fa-box text-sm"></i>
+                    </div>
+                    <span class="font-medium">Products</span>
                 </a>
-                <a href="?page=admin&section=orders" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
-                    <i class="fas fa-shopping-cart mr-3"></i>Orders
+                
+                <a href="?page=admin&section=orders" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mr-3 transition-colors">
+                        <i class="fas fa-shopping-cart text-sm"></i>
+                    </div>
+                    <span class="font-medium">Orders</span>
                 </a>
-                <a href="?page=admin&section=users" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
-                    <i class="fas fa-users mr-3"></i>Customers
+                
+                <a href="?page=admin&section=users" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mr-3 transition-colors">
+                        <i class="fas fa-users text-sm"></i>
+                    </div>
+                    <span class="font-medium">Customers</span>
                 </a>
-                <a href="?page=admin&section=settings" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
-                    <i class="fas fa-cog mr-3"></i>Settings
-                </a>
-                <a href="?page=logout" class="flex items-center px-6 py-3 text-gray-300 hover:text-white hover:bg-gray-700">
-                    <i class="fas fa-sign-out-alt mr-3"></i>Logout
-                </a>
+                
+                <div class="pt-4 mt-4 border-t border-gray-200">
+                    <div class="px-3 py-2">
+                        <span class="text-xs uppercase text-gray-500 font-semibold tracking-wider">System</span>
+                    </div>
+                    
+                    <a href="?page=admin&section=settings" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50">
+                        <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mr-3 transition-colors">
+                            <i class="fas fa-cog text-sm"></i>
+                        </div>
+                        <span class="font-medium">Settings</span>
+                    </a>
+                    
+                    <a href="?page=logout" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <div class="w-9 h-9 rounded-lg bg-red-100 group-hover:bg-red-200 flex items-center justify-center mr-3 transition-colors">
+                            <i class="fas fa-sign-out-alt text-sm"></i>
+                        </div>
+                        <span class="font-medium">Logout</span>
+                    </a>
+                </div>
             </nav>
         </div>
 
-        <!-- Sidebar Overlay -->
-        <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-50 z-40 lg:hidden hidden" onclick="toggleAdminSidebar()"></div>
+        <!-- Sidebar Overlay for Mobile -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-10 lg:hidden hidden backdrop-blur-sm" onclick="toggleAdminSidebar()"></div>
 
-        <!-- Content Area -->
-        <div class="flex-1 p-4 lg:p-8">
+        <!-- Main Content Area -->
+        <div class="flex-1 lg:ml-0 pt-20 lg:pt-0">
+            <div class="p-6 lg:p-8 max-w-7xl mx-auto">
             <!-- Success/Error Messages -->
             <?php if ($success): ?>
                 <div class="mb-6 bg-green-100 border-l-4 border-green-500 text-green-700 p-6 rounded-lg shadow-lg mb-6 animate-pulse">
@@ -237,40 +318,47 @@ $counts = [
                 </div>
             <?php endif; ?>
 
-            <!-- Header -->
+            <!-- Page Header -->
             <div class="mb-8">
-                <h1 class="text-2xl lg:text-3xl font-bold text-gray-800 mb-2">Vendor Management</h1>
-                <p class="text-gray-600">Manage vendor registrations and accounts</p>
+                <div class="flex items-center space-x-4 mb-6">
+                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-store text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Vendor Management</h1>
+                        <p class="text-gray-600 mt-1">Manage vendor registrations and approvals</p>
+                    </div>
+                </div>
             </div>
 
-            <!-- Filter Tabs -->
-            <div class="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
-                <div class="flex flex-wrap border-b border-gray-200">
+            <!-- Modern Filter Tabs -->
+            <div class="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden border border-gray-100">
+                <div class="flex flex-wrap bg-gray-50 p-2">
                     <a href="?page=admin&section=vendors" 
-                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'all' ? 'border-blue-500 text-blue-600 bg-blue-50' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                        All Vendors (<?php echo $counts['all']; ?>)
+                       class="flex-1 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 <?php echo $filter === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-600 hover:text-blue-600 hover:bg-white hover:shadow-md'; ?>">
+                        <i class="fas fa-users mr-2"></i>All (<?php echo $counts['all']; ?>)
                     </a>
                     <a href="?page=admin&section=vendors&filter=pending" 
-                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'pending' ? 'border-yellow-500 text-yellow-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                        Pending (<?php echo $counts['pending']; ?>)
+                       class="flex-1 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 <?php echo $filter === 'pending' ? 'bg-yellow-500 text-white shadow-lg' : 'text-gray-600 hover:text-yellow-600 hover:bg-white hover:shadow-md'; ?>">
+                        <i class="fas fa-clock mr-2"></i>Pending (<?php echo $counts['pending']; ?>)
                     </a>
                     <a href="?page=admin&section=vendors&filter=active" 
-                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'active' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                        Active (<?php echo $counts['active']; ?>)
+                       class="flex-1 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 <?php echo $filter === 'active' ? 'bg-green-500 text-white shadow-lg' : 'text-gray-600 hover:text-green-600 hover:bg-white hover:shadow-md'; ?>">
+                        <i class="fas fa-check-circle mr-2"></i>Active (<?php echo $counts['active']; ?>)
                     </a>
                     <a href="?page=admin&section=vendors&filter=inactive" 
-                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'inactive' ? 'border-gray-500 text-gray-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                        Suspended (<?php echo $counts['inactive']; ?>)
+                       class="flex-1 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 <?php echo $filter === 'inactive' ? 'bg-gray-500 text-white shadow-lg' : 'text-gray-600 hover:text-gray-700 hover:bg-white hover:shadow-md'; ?>">
+                        <i class="fas fa-pause mr-2"></i>Suspended (<?php echo $counts['inactive']; ?>)
                     </a>
                     <a href="?page=admin&section=vendors&filter=rejected" 
-                       class="px-6 py-3 text-sm font-medium border-b-2 <?php echo $filter === 'rejected' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700'; ?>">
-                        Rejected (<?php echo $counts['rejected']; ?>)
+                       class="flex-1 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 <?php echo $filter === 'rejected' ? 'bg-red-500 text-white shadow-lg' : 'text-gray-600 hover:text-red-600 hover:bg-white hover:shadow-md'; ?>">
+                        <i class="fas fa-times-circle mr-2"></i>Rejected (<?php echo $counts['rejected']; ?>)
                     </a>
                 </div>
             </div>
 
             <!-- Vendors List -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                 <?php if (empty($vendors)): ?>
                     <div class="p-12 text-center">
                         <i class="fas fa-store text-6xl text-gray-300 mb-4"></i>
@@ -280,6 +368,33 @@ $counts = [
                             <a href="?page=admin&section=vendors&filter=all" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                                 <i class="fas fa-list mr-2"></i>View All Vendors
                             </a>
+                        </div>
+                        
+                        <!-- Debug: Show what's happening -->
+                        <div class="mt-8 bg-red-50 border border-red-200 rounded-lg p-6 text-left max-w-2xl mx-auto">
+                            <h4 class="font-bold text-red-800 mb-3">🔍 Debug Info:</h4>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>Current Filter:</strong> <code class="bg-white px-2 py-1 rounded"><?php echo htmlspecialchars($filter); ?></code></p>
+                                <p><strong>WHERE Clause:</strong> <code class="bg-white px-2 py-1 rounded"><?php echo htmlspecialchars($whereClause); ?></code></p>
+                                <p><strong>Vendors Array:</strong> <?php echo empty($vendors) ? '❌ EMPTY' : '✅ Has ' . count($vendors) . ' vendors'; ?></p>
+                                <p><strong>SQL Query:</strong></p>
+                                <pre class="bg-white p-3 rounded text-xs overflow-auto mt-2"><?php echo htmlspecialchars($sql ?? 'N/A'); ?></pre>
+                                
+                                <?php if (isset($error) && !empty($error)): ?>
+                                    <p class="text-red-600 font-bold mt-3">⚠️ Error: <?php echo htmlspecialchars($error); ?></p>
+                                <?php endif; ?>
+                                
+                                <div class="mt-4 pt-4 border-t border-red-200">
+                                    <p class="font-semibold mb-2">Quick Test Query:</p>
+                                    <?php
+                                    $testVendors = $database->fetchAll("SELECT id, email, user_type, status FROM users WHERE user_type = 'vendor' LIMIT 5");
+                                    ?>
+                                    <p><strong>Direct vendor users query:</strong> Found <?php echo count($testVendors); ?> users</p>
+                                    <?php if (!empty($testVendors)): ?>
+                                        <pre class="bg-white p-2 rounded text-xs mt-2"><?php print_r($testVendors); ?></pre>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 <?php else: ?>
@@ -316,7 +431,7 @@ $counts = [
                                         <td class="px-6 py-4">
                                             <div>
                                                 <?php if ($vendor['vendor_id']): ?>
-                                                    <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'No shop name'); ?></div>
+                                                <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($vendor['shop_name'] ?: 'No shop name'); ?></div>
                                                 <?php else: ?>
                                                     <div class="text-sm font-medium text-orange-600">
                                                         <i class="fas fa-exclamation-triangle mr-1"></i>Incomplete Profile
@@ -677,5 +792,14 @@ $counts = [
         </div>
     </div>
 </div>
+<script>
+function toggleAdminSidebar() {
+    const sidebar = document.getElementById('admin-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    sidebar.classList.toggle('-translate-x-full');
+    overlay.classList.toggle('hidden');
+}
+</script>
 </body>
 </html>

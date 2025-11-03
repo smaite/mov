@@ -2,9 +2,10 @@
 $pageTitle = 'Shop Profile';
 $pageDescription = 'Manage your shop information';
 
-// Redirect if not vendor
-if (!isVendor()) {
-    redirectTo('?page=login');
+// Check if user is logged in and is a vendor
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
+    echo '<script>window.location.href = "?page=login";</script>';
+    exit();
 }
 
 global $database;
@@ -16,7 +17,8 @@ $vendor = $database->fetchOne("SELECT v.*, u.email, u.first_name, u.last_name, u
     WHERE v.user_id = ?", [$_SESSION['user_id']]);
     
 if (!$vendor) {
-    redirectTo('?page=register&type=vendor');
+    echo '<script>window.location.href = "?page=register&type=vendor";</script>';
+    exit();
 }
 
 $success = '';

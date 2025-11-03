@@ -2,9 +2,10 @@
 $pageTitle = 'Analytics';
 $pageDescription = 'View your sales analytics';
 
-// Redirect if not vendor
-if (!isVendor()) {
-    redirectTo('?page=login');
+// Check if user is logged in and is a vendor
+if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
+    echo '<script>window.location.href = "?page=login";</script>';
+    exit();
 }
 
 global $database;
@@ -12,7 +13,8 @@ global $database;
 // Get vendor info
 $vendor = $database->fetchOne("SELECT * FROM vendors WHERE user_id = ?", [$_SESSION['user_id']]);
 if (!$vendor) {
-    redirectTo('?page=register&type=vendor');
+    echo '<script>window.location.href = "?page=register&type=vendor";</script>';
+    exit();
 }
 
 // Get time period
@@ -66,196 +68,356 @@ $stats = [
 $topProducts = $database->fetchAll("
     SELECT p.id, p.name, p.price, p.sku,
            SUM(oi.quantity) as total_sold,
-           SUM(oi.total) as total_revenue
+           SUM(oi.total) as total_revenue,
+           pi.image_url
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
     JOIN products p ON oi.product_id = p.id
+    LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
     WHERE oi.vendor_id = ? AND o.payment_status = 'paid' {$dateFilter}
     GROUP BY p.id
     ORDER BY total_sold DESC
     LIMIT 10
 ", [$vendor['id']]);
 
-// Sales by status
-$salesByStatus = $database->fetchAll("
-    SELECT o.status, 
-           COUNT(DISTINCT oi.order_id) as order_count,
-           SUM(oi.total) as total_amount
+// Recent orders
+$recentOrders = $database->fetchAll("
+    SELECT DISTINCT o.id, o.order_number, o.total_amount, o.status, o.created_at,
+           u.first_name, u.last_name,
+           (SELECT SUM(oi2.total) FROM order_items oi2 WHERE oi2.order_id = o.id AND oi2.vendor_id = ?) as vendor_amount
+    FROM orders o
+    JOIN order_items oi ON o.id = oi.order_id
+    JOIN users u ON o.user_id = u.id
+    WHERE oi.vendor_id = ? {$dateFilter}
+    ORDER BY o.created_at DESC
+    LIMIT 10
+", [$vendor['id'], $vendor['id']]);
+
+// Monthly revenue chart data (last 12 months)
+$monthlyRevenue = $database->fetchAll("
+    SELECT 
+        DATE_FORMAT(o.created_at, '%Y-%m') as month,
+        COALESCE(SUM(oi.total), 0) as revenue,
+        COUNT(DISTINCT oi.order_id) as orders
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
-    WHERE oi.vendor_id = ? {$dateFilter}
-    GROUP BY o.status
+    WHERE oi.vendor_id = ? AND o.payment_status = 'paid' 
+          AND o.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+    GROUP BY DATE_FORMAT(o.created_at, '%Y-%m')
+    ORDER BY month DESC
 ", [$vendor['id']]);
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?> - <?php echo SITE_NAME; ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Back Button -->
-            <div class="mb-6">
-                <a href="?page=vendor" class="text-primary hover:text-opacity-80 font-semibold">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                </a>
+<!-- Modern Vendor Analytics Page -->
+<div class="min-h-screen bg-gradient-to-br from-orange-50 to-red-50" style="padding-top: 80px;">
+    
+    <!-- Mobile Header -->
+    <div class="lg:hidden fixed top-16 left-0 right-0 bg-white shadow-lg border-b px-4 py-4 z-30">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <h1 class="text-lg font-bold text-gray-800">Analytics</h1>
             </div>
+            <button onclick="toggleVendorSidebar()" class="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+                <i class="fas fa-bars text-gray-600"></i>
+            </button>
+        </div>
+    </div>
 
-            <!-- Header -->
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-800">Analytics</h1>
-                    <p class="text-gray-600">Track your sales performance</p>
+    <div class="flex">
+        <!-- Modern Vendor Sidebar -->
+        <div id="vendor-sidebar" class="fixed top-16 bottom-0 left-0 z-20 w-72 bg-white shadow-2xl transform -translate-x-full transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-auto border-r border-gray-200">
+            
+            <!-- Vendor Profile Header -->
+            <div class="p-6 bg-gradient-to-r from-orange-500 to-red-500">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-store text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white"><?php echo htmlspecialchars($vendor['shop_name']); ?></h2>
+                            <div class="flex items-center text-orange-100 text-sm">
+                                <i class="fas fa-check-circle mr-1"></i>Active Store
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="toggleVendorSidebar()" class="lg:hidden p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+                        <i class="fas fa-times text-white"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="p-4 space-y-2">
+                <div class="px-3 py-2">
+                    <span class="text-xs uppercase text-gray-500 font-semibold tracking-wider">Dashboard</span>
                 </div>
                 
-                <!-- Period Selector -->
-                <div class="flex space-x-2">
-                    <a href="?page=vendor&section=analytics&period=7days" 
-                       class="px-4 py-2 rounded-lg text-sm font-medium <?php echo $period === '7days' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?>">
-                        7 Days
+                <a href="?page=vendor" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
+                        <i class="fas fa-tachometer-alt text-sm"></i>
+                    </div>
+                    <span class="font-medium">Overview</span>
+                </a>
+                
+                <a href="?page=vendor&section=products" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
+                        <i class="fas fa-box text-sm"></i>
+                    </div>
+                    <span class="font-medium">Products</span>
+                </a>
+                
+                <a href="?page=vendor&section=orders" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                    <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
+                        <i class="fas fa-shopping-cart text-sm"></i>
+                    </div>
+                    <span class="font-medium">Orders</span>
+                </a>
+                
+                <a href="?page=vendor&section=analytics" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-white bg-gradient-to-r from-orange-500 to-red-500 shadow-lg">
+                    <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center mr-3">
+                        <i class="fas fa-chart-line text-sm"></i>
+                    </div>
+                    <span class="font-medium">Analytics</span>
+                    <div class="ml-auto w-2 h-2 bg-white rounded-full"></div>
+                </a>
+                
+                <div class="pt-4 mt-4 border-t border-gray-200">
+                    <div class="px-3 py-2">
+                        <span class="text-xs uppercase text-gray-500 font-semibold tracking-wider">Account</span>
+                    </div>
+                    
+                    <a href="?page=vendor&section=profile" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                        <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
+                            <i class="fas fa-user text-sm"></i>
+                        </div>
+                        <span class="font-medium">Profile</span>
                     </a>
-                    <a href="?page=vendor&section=analytics&period=30days" 
-                       class="px-4 py-2 rounded-lg text-sm font-medium <?php echo $period === '30days' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?>">
-                        30 Days
-                    </a>
-                    <a href="?page=vendor&section=analytics&period=90days" 
-                       class="px-4 py-2 rounded-lg text-sm font-medium <?php echo $period === '90days' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?>">
-                        90 Days
-                    </a>
-                    <a href="?page=vendor&section=analytics&period=year" 
-                       class="px-4 py-2 rounded-lg text-sm font-medium <?php echo $period === 'year' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?>">
-                        1 Year
-                    </a>
-                    <a href="?page=vendor&section=analytics&period=all" 
-                       class="px-4 py-2 rounded-lg text-sm font-medium <?php echo $period === 'all' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?>">
-                        All Time
+                    
+                    <a href="?page=logout" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <div class="w-9 h-9 rounded-lg bg-red-100 group-hover:bg-red-200 flex items-center justify-center mr-3 transition-colors">
+                            <i class="fas fa-sign-out-alt text-sm"></i>
+                        </div>
+                        <span class="font-medium">Logout</span>
                     </a>
                 </div>
-            </div>
+            </nav>
+        </div>
 
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="p-3 bg-green-100 rounded-full">
-                            <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+        <!-- Sidebar Overlay for Mobile -->
+        <div id="vendor-overlay" class="fixed inset-0 bg-black/50 z-10 lg:hidden hidden backdrop-blur-sm" onclick="toggleVendorSidebar()"></div>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 lg:ml-0 pt-20 lg:pt-0">
+            <div class="p-6 lg:p-8 max-w-7xl mx-auto">
+                
+                <!-- Page Header -->
+                <div class="mb-8">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
+                                <i class="fas fa-chart-line text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900">Sales Analytics</h1>
+                                <p class="text-gray-600 mt-1">Track your store performance and sales</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Time Period Filter -->
+                        <div class="mt-4 lg:mt-0">
+                            <select onchange="window.location.href='?page=vendor&section=analytics&period=' + this.value" 
+                                    class="px-4 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white">
+                                <option value="7days" <?php echo $period === '7days' ? 'selected' : ''; ?>>Last 7 Days</option>
+                                <option value="30days" <?php echo $period === '30days' ? 'selected' : ''; ?>>Last 30 Days</option>
+                                <option value="90days" <?php echo $period === '90days' ? 'selected' : ''; ?>>Last 90 Days</option>
+                                <option value="year" <?php echo $period === 'year' ? 'selected' : ''; ?>>This Year</option>
+                                <option value="all" <?php echo $period === 'all' ? 'selected' : ''; ?>>All Time</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="text-2xl font-bold text-gray-900"><?php echo formatPrice($stats['total_revenue']); ?></div>
-                    <div class="text-sm text-gray-600">Total Revenue</div>
                 </div>
 
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="p-3 bg-blue-100 rounded-full">
-                            <i class="fas fa-shopping-cart text-blue-600 text-xl"></i>
+                <!-- Analytics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Total Revenue -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl shadow-lg">
+                                <i class="fas fa-dollar-sign text-white text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">REVENUE</span>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-gray-900 mb-1">Rs. <?php echo number_format($stats['total_revenue'], 2); ?></p>
+                            <p class="text-sm text-gray-600">Total Revenue</p>
                         </div>
                     </div>
-                    <div class="text-2xl font-bold text-gray-900"><?php echo number_format($stats['total_orders']); ?></div>
-                    <div class="text-sm text-gray-600">Total Orders</div>
-                </div>
 
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="p-3 bg-purple-100 rounded-full">
-                            <i class="fas fa-box text-purple-600 text-xl"></i>
+                    <!-- Total Orders -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+                                <i class="fas fa-shopping-cart text-white text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">ORDERS</span>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-gray-900 mb-1"><?php echo number_format($stats['total_orders']); ?></p>
+                            <p class="text-sm text-gray-600">Total Orders</p>
                         </div>
                     </div>
-                    <div class="text-2xl font-bold text-gray-900"><?php echo number_format($stats['total_items_sold']); ?></div>
-                    <div class="text-sm text-gray-600">Items Sold</div>
-                </div>
 
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="p-3 bg-yellow-100 rounded-full">
-                            <i class="fas fa-chart-line text-yellow-600 text-xl"></i>
+                    <!-- Items Sold -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl shadow-lg">
+                                <i class="fas fa-box text-white text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded-full">ITEMS</span>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-gray-900 mb-1"><?php echo number_format($stats['total_items_sold']); ?></p>
+                            <p class="text-sm text-gray-600">Items Sold</p>
                         </div>
                     </div>
-                    <div class="text-2xl font-bold text-gray-900"><?php echo formatPrice($stats['avg_order_value']); ?></div>
-                    <div class="text-sm text-gray-600">Avg Order Value</div>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Top Products -->
-                <div class="bg-white rounded-lg shadow">
+                    <!-- Average Order Value -->
+                    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="p-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-2xl shadow-lg">
+                                <i class="fas fa-chart-bar text-white text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">AOV</span>
+                        </div>
+                        <div>
+                            <p class="text-3xl font-bold text-gray-900 mb-1">Rs. <?php echo number_format($stats['avg_order_value'], 2); ?></p>
+                            <p class="text-sm text-gray-600">Avg Order Value</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Top Selling Products -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                                <i class="fas fa-trophy mr-2 text-yellow-500"></i>
+                                Top Selling Products
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <?php if (empty($topProducts)): ?>
+                                <div class="text-center py-8">
+                                    <i class="fas fa-chart-bar text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500">No sales data available</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="space-y-4">
+                                    <?php foreach ($topProducts as $index => $product): ?>
+                                        <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
+                                            <div class="flex-shrink-0">
+                                                <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                                    <?php echo $index + 1; ?>
+                                                </div>
+                                            </div>
+                                            <div class="w-12 h-12 bg-white rounded-lg overflow-hidden">
+                                                <?php if ($product['image_url']): ?>
+                                                    <img src="<?php echo htmlspecialchars($product['image_url']); ?>" 
+                                                         alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                                         class="w-full h-full object-cover">
+                                                <?php else: ?>
+                                                    <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                                        <i class="fas fa-image"></i>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="font-semibold text-gray-900 truncate"><?php echo htmlspecialchars($product['name']); ?></p>
+                                                <p class="text-sm text-gray-600"><?php echo $product['total_sold']; ?> sold • Rs. <?php echo number_format($product['total_revenue'], 2); ?></p>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Recent Orders -->
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                                <i class="fas fa-shopping-cart mr-2 text-blue-500"></i>
+                                Recent Orders
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <?php if (empty($recentOrders)): ?>
+                                <div class="text-center py-8">
+                                    <i class="fas fa-shopping-cart text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500">No orders yet</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="space-y-4">
+                                    <?php foreach ($recentOrders as $order): ?>
+                                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                            <div>
+                                                <p class="font-semibold text-gray-900"><?php echo htmlspecialchars($order['order_number']); ?></p>
+                                                <p class="text-sm text-gray-600"><?php echo htmlspecialchars($order['first_name'] . ' ' . $order['last_name']); ?></p>
+                                                <p class="text-xs text-gray-500"><?php echo date('M j, Y', strtotime($order['created_at'])); ?></p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="font-bold text-gray-900">Rs. <?php echo number_format($order['vendor_amount'], 2); ?></p>
+                                                <span class="text-xs px-2 py-1 rounded-full <?php echo $order['status'] === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?>">
+                                                    <?php echo ucfirst($order['status']); ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Revenue Chart -->
+                <?php if (!empty($monthlyRevenue)): ?>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 mb-8">
                     <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-800">Top Selling Products</h3>
+                        <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                            <i class="fas fa-chart-line mr-2 text-green-500"></i>
+                            Monthly Revenue Trend
+                        </h3>
                     </div>
                     <div class="p-6">
-                        <?php if (empty($topProducts)): ?>
-                            <div class="text-center text-gray-500 py-8">
-                                <i class="fas fa-chart-bar text-4xl mb-4"></i>
-                                <p>No sales data yet</p>
-                            </div>
-                        <?php else: ?>
-                            <div class="space-y-4">
-                                <?php foreach ($topProducts as $product): ?>
-                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                        <div class="flex-1">
-                                            <h4 class="font-medium text-gray-900"><?php echo htmlspecialchars($product['name']); ?></h4>
-                                            <p class="text-sm text-gray-600">SKU: <?php echo htmlspecialchars($product['sku']); ?></p>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="text-lg font-semibold text-gray-900"><?php echo number_format($product['total_sold']); ?> sold</div>
-                                            <div class="text-sm text-green-600"><?php echo formatPrice($product['total_revenue']); ?></div>
-                                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                            <?php foreach (array_reverse($monthlyRevenue) as $month): ?>
+                                <div class="text-center">
+                                    <div class="bg-gradient-to-t from-orange-500 to-red-500 rounded-lg mb-2" 
+                                         style="height: <?php echo min(100, ($month['revenue'] / max(array_column($monthlyRevenue, 'revenue'))) * 100); ?>px;">
                                     </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
+                                    <p class="text-sm font-semibold text-gray-900">Rs. <?php echo number_format($month['revenue'], 0); ?></p>
+                                    <p class="text-xs text-gray-600"><?php echo date('M Y', strtotime($month['month'] . '-01')); ?></p>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Sales by Status -->
-                <div class="bg-white rounded-lg shadow">
-                    <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-800">Orders by Status</h3>
-                    </div>
-                    <div class="p-6">
-                        <?php if (empty($salesByStatus)): ?>
-                            <div class="text-center text-gray-500 py-8">
-                                <i class="fas fa-chart-pie text-4xl mb-4"></i>
-                                <p>No orders yet</p>
-                            </div>
-                        <?php else: ?>
-                            <div class="space-y-4">
-                                <?php foreach ($salesByStatus as $status): ?>
-                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                        <div class="flex items-center">
-                                            <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full
-                                                <?php 
-                                                switch($status['status']) {
-                                                    case 'pending': echo 'bg-yellow-100 text-yellow-800'; break;
-                                                    case 'confirmed': echo 'bg-blue-100 text-blue-800'; break;
-                                                    case 'processing': echo 'bg-purple-100 text-purple-800'; break;
-                                                    case 'shipped': echo 'bg-indigo-100 text-indigo-800'; break;
-                                                    case 'delivered': echo 'bg-green-100 text-green-800'; break;
-                                                    case 'cancelled': echo 'bg-red-100 text-red-800'; break;
-                                                    default: echo 'bg-gray-100 text-gray-800';
-                                                }
-                                                ?>">
-                                                <?php echo ucfirst($status['status']); ?>
-                                            </span>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="text-lg font-semibold text-gray-900"><?php echo number_format($status['order_count']); ?> orders</div>
-                                            <div class="text-sm text-gray-600"><?php echo formatPrice($status['total_amount']); ?></div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+
+<script>
+function toggleVendorSidebar() {
+    const sidebar = document.getElementById('vendor-sidebar');
+    const overlay = document.getElementById('vendor-overlay');
+    
+    sidebar.classList.toggle('-translate-x-full');
+    overlay.classList.toggle('hidden');
+}
+</script>

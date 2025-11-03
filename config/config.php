@@ -7,9 +7,9 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Error reporting (disable in production)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-define('DEBUG_MODE', true); // Enable detailed error messages for debugging
+error_reporting(E_ALL & ~E_WARNING);
+ini_set('display_errors', 0);
+define('DEBUG_MODE', false); // Disable detailed error messages for production
 
 // Site configuration
 define('SITE_NAME', 'Sasto Hub');

@@ -20,7 +20,7 @@ global $database;
 $stats = [
     'total_orders' => $database->count('orders', 'user_id = ?', [$_SESSION['user_id']]),
     'pending_orders' => $database->count('orders', 'user_id = ? AND status IN (?, ?)', [$_SESSION['user_id'], 'pending', 'confirmed']),
-    'wishlist_count' => $database->count('wishlists', 'user_id = ?', [$_SESSION['user_id']]),
+    'wishlist_count' => $database->count('wishlist', 'user_id = ?', [$_SESSION['user_id']]),
     'cart_count' => $database->count('cart', 'user_id = ?', [$_SESSION['user_id']])
 ];
 
