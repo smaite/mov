@@ -109,7 +109,7 @@ $monthlyRevenue = $database->fetchAll("
 ?>
 
 <!-- Modern Vendor Analytics Page -->
-<div class="min-h-screen bg-gradient-to-br from-orange-50 to-red-50" style="padding-top: 80px;">
+<div class="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
     
     <!-- Mobile Header -->
     <div class="lg:hidden fixed top-16 left-0 right-0 bg-white shadow-lg border-b px-4 py-4 z-30">
