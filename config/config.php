@@ -13,7 +13,7 @@ define('DEBUG_MODE', false); // Disable detailed error messages for production
 
 // Site configuration
 define('SITE_NAME', 'Sasto Hub');
-define('SITE_URL', 'http://localhost/mov');
+define('SITE_URL', 'http://localhost/mov/');
 define('SITE_EMAIL', 'info@sastohub.com');
 
 // Directory paths
