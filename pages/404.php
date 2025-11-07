@@ -1,6 +1,6 @@
 <?php
 $pageTitle = "Page Not Found";
-$pageDescription = "The requested page could not be found.";
+$pageDescription = "The requested page could not be found.";s
 ?>
 
 <div class="container mx-auto px-4 py-16">

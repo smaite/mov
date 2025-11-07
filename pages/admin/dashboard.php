@@ -49,7 +49,7 @@ $recentVendors = $database->fetchAll("
     FROM users u 
     LEFT JOIN vendors v ON u.id = v.user_id 
     WHERE u.user_type = 'vendor' 
-    ORDER BY u.created_at DESC 
+    ORDER BY u.created_at DESC
     LIMIT 5
 ");
 
@@ -58,11 +58,11 @@ $recentProducts = $database->fetchAll("
            pi.image_url
     FROM products p
     JOIN vendors v ON p.vendor_id = v.id
-    JOIN users u ON v.user_id = u.id
+            JOIN users u ON v.user_id = u.id
     LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
     ORDER BY p.created_at DESC
     LIMIT 5
-");
+        ");
 ?>
 
 <!-- Modern Admin Dashboard -->
@@ -103,8 +103,8 @@ $recentProducts = $database->fetchAll("
                     </div>
                     <button onclick="toggleAdminSidebar()" class="lg:hidden p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
                         <i class="fas fa-times text-white"></i>
-                    </button>
-                </div>
+                </button>
+            </div>
             </div>
             
             <!-- Navigation Menu -->
@@ -116,7 +116,7 @@ $recentProducts = $database->fetchAll("
                 <a href="?page=admin" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-white bg-gradient-to-r from-blue-500 to-indigo-500 shadow-lg">
                     <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center mr-3">
                         <i class="fas fa-tachometer-alt text-sm"></i>
-                    </div>
+                </div>
                     <span class="font-medium">Overview</span>
                     <div class="ml-auto w-2 h-2 bg-white rounded-full"></div>
                 </a>
@@ -156,7 +156,7 @@ $recentProducts = $database->fetchAll("
                     <a href="?page=admin&section=users" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-blue-600 hover:bg-blue-50">
                         <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mr-3 transition-colors">
                             <i class="fas fa-users text-sm"></i>
-                        </div>
+                </div>
                         <span class="font-medium">Users</span>
                     </a>
                 </div>
@@ -190,15 +190,15 @@ $recentProducts = $database->fetchAll("
                             <div>
                                 <h1 class="text-4xl font-bold mb-2">Welcome back, Admin!</h1>
                                 <p class="text-blue-100 text-lg">Here's what's happening with your platform today.</p>
-                            </div>
+                    </div>
                             <div class="hidden lg:block">
                                 <div class="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center">
                                     <i class="fas fa-chart-line text-4xl"></i>
-                                </div>
+                    </div>
+                            </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
                 <!-- Statistics Overview -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -252,14 +252,14 @@ $recentProducts = $database->fetchAll("
                             <div class="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl shadow-lg">
                                 <i class="fas fa-tags text-white text-2xl"></i>
                             </div>
-                        </div>
+                            </div>
                         <div>
                             <p class="text-3xl font-bold text-gray-900 mb-1"><?php echo $stats['total_categories']; ?></p>
                             <p class="text-sm text-gray-600">Categories</p>
                             <p class="text-xs text-green-600 mt-2"><?php echo $stats['active_categories']; ?> active</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
@@ -329,11 +329,11 @@ $recentProducts = $database->fetchAll("
                                                     ($vendor['status'] === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
                                                 ?>">
                                                     <?php echo ucfirst($vendor['status']); ?>
-                                                </span>
+                                                        </span>
                                                 <p class="text-xs text-gray-500 mt-1"><?php echo date('M j, Y', strtotime($vendor['created_at'])); ?></p>
                                             </div>
                                         </div>
-                                    <?php endforeach; ?>
+                                            <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -367,12 +367,12 @@ $recentProducts = $database->fetchAll("
                                                         <i class="fas fa-image"></i>
                                                     </div>
                                                 <?php endif; ?>
-                                            </div>
+                                                </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="font-semibold text-gray-900 truncate"><?php echo htmlspecialchars($product['name']); ?></p>
                                                 <p class="text-sm text-gray-600"><?php echo htmlspecialchars($product['shop_name']); ?></p>
                                                 <p class="text-xs text-gray-500">Rs. <?php echo number_format($product['price'], 2); ?></p>
-                                            </div>
+                                                </div>
                                             <div class="text-right">
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?php echo 
                                                     $product['status'] === 'active' ? 'bg-green-100 text-green-800' :
