@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.andoird"
+    namespace = "com.sastohub.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
