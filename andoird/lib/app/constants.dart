@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'Sasto Hub';
-  static const String apiBaseUrl = 'https://sastohub.com';
+  static const String apiBaseUrl = 'http://localhost/mov';
   static const String localApiBaseUrl = 'http://localhost/mov';
   static const String imageBaseUrl = '$apiBaseUrl/uploads/';
   
