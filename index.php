@@ -1,5 +1,6 @@
 <?php
 require_once 'config/config.php';
+require_once 'config/cors.php';
 
 // Simple routing system
 $page = $_GET['page'] ?? 'home';
