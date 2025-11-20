@@ -4,9 +4,7 @@ $pageDescription = 'Manage your products and orders';
 
 // Check if user is logged in and is a vendor
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
-    ?>
-    <script>window.location.href = "?page=login";</script>
-    <?php
+    header('Location: ?page=login');
     exit();
 }
 
@@ -21,29 +19,7 @@ if (!$vendor) {
     exit();
 }
 
-// Check if vendor is verified
-if (!isset($_SESSION['status']) || $_SESSION['status'] !== 'active') {
-    include __DIR__ . '/verification-pending.php';
-    return;
-}
 
-// Handle different vendor sections
-$section = $_GET['section'] ?? 'dashboard';
-
-switch ($section) {
-    case 'products':
-        include __DIR__ . '/products.php';
-        return;
-    case 'orders':
-        include __DIR__ . '/orders.php';
-        return;
-    case 'analytics':
-        include __DIR__ . '/analytics.php';
-        return;
-    case 'profile':
-        include __DIR__ . '/profile.php';
-        return;
-}
 
 // Get vendor statistics
 $stats = [
@@ -78,18 +54,90 @@ $recentOrders = $database->fetchAll("
 ", [$vendor['id']]);
 ?>
 
-<!-- Modern Vendor Dashboard -->
-<div class="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $pageTitle; ?> - <?php echo SITE_NAME; ?></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for vendor system */
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .sidebar-overlay {
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Ensure proper mobile behavior */
+        @media (max-width: 1024px) {
+            .vendor-sidebar {
+                position: fixed;
+                top: 64px; /* Account for header height */
+                bottom: 0;
+                left: 0;
+                z-index: 40;
+                width: 288px;
+                transform: translateX(-100%);
+            }
+            
+            .vendor-sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .vendor-content {
+                margin-left: 0;
+                padding-top: 64px; /* Account for fixed header */
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .vendor-sidebar {
+                position: relative;
+                width: 288px;
+                transform: translateX(0) !important;
+            }
+            
+            .vendor-content {
+                margin-left: 288px;
+                padding-top: 0;
+            }
+        }
+        
+        /* Hide mobile header on desktop */
+        @media (min-width: 1025px) {
+            .mobile-header {
+                display: none;
+            }
+        }
+        
+        /* Show mobile header only on mobile */
+        @media (max-width: 1024px) {
+            .mobile-header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 50;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-red-50 min-h-screen">
     <!-- Mobile Header -->
-    <div class="lg:hidden fixed top-16 left-0 right-0 bg-white shadow-lg border-b px-4 py-4 z-30">
+    <div class="mobile-header bg-white shadow-lg border-b px-4 py-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                     <i class="fas fa-store text-white text-sm"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-gray-800"><?php echo htmlspecialchars($vendor['shop_name']); ?></h1>
+                    <h1 class="text-lg font-bold text-gray-800">Welcome, <?php echo htmlspecialchars($vendor['shop_name']); ?></h1>
                     <p class="text-xs text-gray-500">Vendor Dashboard</p>
                 </div>
             </div>
@@ -101,23 +149,28 @@ $recentOrders = $database->fetchAll("
 
     <div class="flex">
         <!-- Modern Vendor Sidebar -->
-        <div id="vendor-sidebar" class="fixed top-16 bottom-0 left-0 z-20 w-72 bg-white shadow-2xl transform -translate-x-full transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-auto border-r border-gray-200">
+        <div id="vendor-sidebar" class="vendor-sidebar bg-white shadow-2xl border-r border-gray-200 sidebar-transition">
             
             <!-- Vendor Profile Header -->
             <div class="p-6 bg-gradient-to-r from-orange-500 to-red-500">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                            <i class="fas fa-store text-white text-xl"></i>
-                    </div>
+                            <?php if ($vendor['shop_logo']): ?>
+                                <img src="<?php echo htmlspecialchars($vendor['shop_logo']); ?>" 
+                                     alt="Shop Logo" class="w-full h-full object-cover rounded-xl">
+                            <?php else: ?>
+                                <i class="fas fa-store text-white text-xl"></i>
+                            <?php endif; ?>
+                        </div>
                         <div>
                             <h2 class="text-lg font-bold text-white"><?php echo htmlspecialchars($vendor['shop_name']); ?></h2>
                             <div class="flex items-center text-orange-100 text-sm">
-                        <?php if ($_SESSION['status'] === 'active'): ?>
+                                <?php if ($_SESSION['status'] === 'active'): ?>
                                     <i class="fas fa-check-circle mr-1"></i>Active Store
-                        <?php else: ?>
+                                <?php else: ?>
                                     <i class="fas fa-clock mr-1"></i><?php echo ucfirst($_SESSION['status']); ?>
-                        <?php endif; ?>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -141,21 +194,21 @@ $recentOrders = $database->fetchAll("
                     <div class="ml-auto w-2 h-2 bg-white rounded-full"></div>
                 </a>
                 
-                <a href="?page=vendor&section=products" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                <a href="?page=vendor-products" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
                     <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
                         <i class="fas fa-box text-sm"></i>
                     </div>
                     <span class="font-medium">Products</span>
                 </a>
                 
-                <a href="?page=vendor&section=orders" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                <a href="?page=vendor-orders" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
                     <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
                         <i class="fas fa-shopping-cart text-sm"></i>
                     </div>
                     <span class="font-medium">Orders</span>
                 </a>
                 
-                <a href="?page=vendor&section=analytics" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                <a href="?page=vendor-analytics" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
                     <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
                         <i class="fas fa-chart-line text-sm"></i>
                     </div>
@@ -167,7 +220,7 @@ $recentOrders = $database->fetchAll("
                         <span class="text-xs uppercase text-gray-500 font-semibold tracking-wider">Account</span>
                     </div>
                     
-                    <a href="?page=vendor&section=profile" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                    <a href="?page=vendor-profile" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
                         <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
                             <i class="fas fa-user text-sm"></i>
                         </div>
@@ -185,10 +238,10 @@ $recentOrders = $database->fetchAll("
         </div>
 
         <!-- Sidebar Overlay for Mobile -->
-        <div id="vendor-overlay" class="fixed inset-0 bg-black/50 z-10 lg:hidden hidden backdrop-blur-sm" onclick="toggleVendorSidebar()"></div>
+        <div id="vendor-overlay" class="fixed inset-0 bg-black/50 z-30 lg:hidden sidebar-overlay" onclick="toggleVendorSidebar()"></div>
 
         <!-- Main Content Area -->
-        <div class="flex-1 lg:ml-0 pt-20 lg:pt-0">
+        <div class="vendor-content flex-1">
             <div class="p-6 lg:p-8 max-w-7xl mx-auto">
                 
                 <!-- Page Header -->
@@ -269,7 +322,7 @@ $recentOrders = $database->fetchAll("
                     <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-xl font-bold text-gray-900">Recent Orders</h3>
-                            <a href="?page=vendor&section=orders" class="text-orange-600 hover:text-orange-700 font-medium text-sm">View All</a>
+                            <a href="?page=vendor-orders" class="text-orange-600 hover:text-orange-700 font-medium text-sm">View All</a>
                     </div>
 
                         <?php if (empty($recentOrders)): ?>
@@ -301,15 +354,15 @@ $recentOrders = $database->fetchAll("
                     <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                         <h3 class="text-xl font-bold text-gray-900 mb-6">Quick Actions</h3>
                         <div class="grid grid-cols-2 gap-4">
-                        <a href="?page=vendor&section=products&action=add" 
+                        <a href="?page=vendor-products" 
                                class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 group">
                                 <div class="w-12 h-12 bg-orange-100 group-hover:bg-orange-200 rounded-2xl flex items-center justify-center mb-3">
                                     <i class="fas fa-plus text-orange-600 text-xl"></i>
                                 </div>
-                                <span class="text-sm font-semibold text-gray-700 group-hover:text-orange-600">Add Product</span>
+                                <span class="text-sm font-semibold text-gray-700 group-hover:text-orange-600">Manage Products</span>
                         </a>
                         
-                        <a href="?page=vendor&section=orders" 
+                        <a href="?page=vendor-orders" 
                                class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 group">
                                 <div class="w-12 h-12 bg-blue-100 group-hover:bg-blue-200 rounded-2xl flex items-center justify-center mb-3">
                                     <i class="fas fa-shopping-cart text-blue-600 text-xl"></i>
@@ -317,20 +370,20 @@ $recentOrders = $database->fetchAll("
                                 <span class="text-sm font-semibold text-gray-700 group-hover:text-blue-600">View Orders</span>
                         </a>
                         
-                        <a href="?page=vendor&section=analytics" 
+                        <a href="?page=vendor-analytics" 
                                class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 group">
                                 <div class="w-12 h-12 bg-green-100 group-hover:bg-green-200 rounded-2xl flex items-center justify-center mb-3">
                                     <i class="fas fa-chart-line text-green-600 text-xl"></i>
                                 </div>
-                                <span class="text-sm font-semibold text-gray-700 group-hover:text-green-600">Analytics</span>
+                                <span class="text-sm font-semibold text-gray-700 group-hover:text-green-600">View Analytics</span>
                         </a>
                         
-                        <a href="?page=vendor&section=profile" 
+                        <a href="?page=vendor-profile" 
                                class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 group">
                                 <div class="w-12 h-12 bg-purple-100 group-hover:bg-purple-200 rounded-2xl flex items-center justify-center mb-3">
                                     <i class="fas fa-user text-purple-600 text-xl"></i>
                                 </div>
-                                <span class="text-sm font-semibold text-gray-700 group-hover:text-purple-600">Profile</span>
+                                <span class="text-sm font-semibold text-gray-700 group-hover:text-purple-600">Edit Profile</span>
                             </a>
                         </div>
                     </div>
@@ -338,14 +391,49 @@ $recentOrders = $database->fetchAll("
             </div>
         </div>
     </div>
-</div>
 
-<script>
-function toggleVendorSidebar() {
-    const sidebar = document.getElementById('vendor-sidebar');
-    const overlay = document.getElementById('vendor-overlay');
-    
-    sidebar.classList.toggle('-translate-x-full');
-    overlay.classList.toggle('hidden');
-}
-</script>
+    <script>
+    function toggleVendorSidebar() {
+        const sidebar = document.getElementById('vendor-sidebar');
+        const overlay = document.getElementById('vendor-overlay');
+        
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('hidden');
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+        const sidebar = document.getElementById('vendor-sidebar');
+        const overlay = document.getElementById('vendor-overlay');
+        const toggleButton = event.target.closest('[onclick="toggleVendorSidebar()"]');
+        
+        if (!toggleButton && !sidebar.contains(event.target) && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+            overlay.classList.add('hidden');
+        }
+    });
+
+    // Initialize sidebar state based on screen size
+    function initializeSidebar() {
+        const sidebar = document.getElementById('vendor-sidebar');
+        const overlay = document.getElementById('vendor-overlay');
+        
+        if (window.innerWidth <= 1024) {
+            // Mobile: hide sidebar by default
+            sidebar.classList.remove('open');
+            overlay.classList.add('hidden');
+        } else {
+            // Desktop: always show sidebar
+            sidebar.classList.add('open');
+            overlay.classList.add('hidden');
+        }
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', initializeSidebar);
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initializeSidebar);
+    </script>
+</body>
+</html>

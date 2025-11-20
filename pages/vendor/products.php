@@ -1,10 +1,11 @@
+
 <?php
 $pageTitle = 'My Products';
 $pageDescription = 'Manage your products';
 
 // Check if user is logged in and is a vendor
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
-    echo '<script>window.location.href = "?page=login";</script>';
+    header('Location: ?page=login');
     exit();
 }
 
@@ -13,12 +14,12 @@ global $database;
 // Get vendor info
 $vendor = $database->fetchOne("SELECT * FROM vendors WHERE user_id = ?", [$_SESSION['user_id']]);
 if (!$vendor) {
-    echo '<script>window.location.href = "?page=register&type=vendor";</script>';
+    header('Location: ?page=register&type=vendor');
     exit();
 }
 
 // Check if vendor is verified
-if ($_SESSION['status'] !== 'active') {
+if (!isset($_SESSION['status']) || $_SESSION['status'] !== 'active') {
     include __DIR__ . '/verification-pending.php';
     return;
 }
@@ -59,10 +60,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $minStockLevel = intval($_POST['min_stock_level'] ?? 5);
             $tags = trim($_POST['tags'] ?? '');
             $brand = trim($_POST['brand'] ?? '');
-            
+           
             if (empty($name) || $price <= 0 || $stockQuantity < 0 || $categoryId <= 0) {
                 $error = 'Please fill all required fields with valid values.';
             } else {
+                // Generate unique slug from product name
+                $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
+                $slug = preg_replace('/-+/', '-', $slug);
+                $slug = trim($slug, '-');
+                
+                // Check if slug already exists and make it unique
+                $originalSlug = $slug;
+                $counter = 1;
+                while ($database->fetchOne("SELECT id FROM products WHERE slug = ? AND vendor_id != ?", [$slug, $vendor['id']])) {
+                    $slug = $originalSlug . '-' . $counter;
+                    $counter++;
+                }
+                
                 // Check if SKU already exists
                 $existingSKU = $database->fetchOne("SELECT id FROM products WHERE sku = ? AND vendor_id != ?", [$sku, $vendor['id']]);
                 if ($existingSKU) {
@@ -77,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'price' => $price,
                         'sale_price' => $salePrice,
                         'sku' => $sku,
+                        'slug' => $slug,
                         'stock_quantity' => $stockQuantity,
                         'min_stock_level' => $minStockLevel,
                         'weight' => $weight,
@@ -120,12 +135,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         
                         $success = 'Product added successfully! It will be live after admin approval.';
-                        header('Location: ?page=vendor&section=products');
+                        header('Location: ?page=vendor-products');
                         exit();
                     } else {
                         $error = 'Failed to add product. Please try again.';
                     }
                 }
+            }
+        }
+        
+        if ($action === 'update_product') {
+            $productId = intval($_POST['product_id'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $shortDescription = trim($_POST['short_description'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $price = floatval($_POST['price'] ?? 0);
+            $salePrice = !empty($_POST['sale_price']) ? floatval($_POST['sale_price']) : null;
+            $stockQuantity = intval($_POST['stock_quantity'] ?? 0);
+            $categoryId = intval($_POST['category_id'] ?? 0);
+            $sku = trim($_POST['sku'] ?? '');
+            $weight = floatval($_POST['weight'] ?? 0);
+            $dimensions = trim($_POST['dimensions'] ?? '');
+            $minStockLevel = intval($_POST['min_stock_level'] ?? 5);
+            $tags = trim($_POST['tags'] ?? '');
+            $brand = trim($_POST['brand'] ?? '');
+            
+            if (empty($name) || $price <= 0 || $stockQuantity < 0 || $categoryId <= 0) {
+                $error = 'Please fill all required fields with valid values.';
+            } else {
+                // Generate unique slug from product name
+                $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $name));
+                $slug = preg_replace('/-+/', '-', $slug);
+                $slug = trim($slug, '-');
+                
+                // Check if slug already exists (excluding current product)
+                $originalSlug = $slug;
+                $counter = 1;
+                while ($database->fetchOne("SELECT id FROM products WHERE slug = ? AND vendor_id != ? AND id != ?", [$slug, $vendor['id'], $productId])) {
+                    $slug = $originalSlug . '-' . $counter;
+                    $counter++;
+                }
+                
+                // Check if SKU already exists (excluding current product)
+                $existingSKU = $database->fetchOne("SELECT id FROM products WHERE sku = ? AND vendor_id != ? AND id != ?", [$sku, $vendor['id'], $productId]);
+                if ($existingSKU) {
+                    $error = 'SKU already exists. Please use a unique SKU.';
+                } else {
+                    $updated = $database->update('products', [
+                        'category_id' => $categoryId,
+                        'name' => $name,
+                        'short_description' => $shortDescription,
+                        'description' => $description,
+                        'price' => $price,
+                        'sale_price' => $salePrice,
+                        'sku' => $sku,
+                        'slug' => $slug,
+                        'stock_quantity' => $stockQuantity,
+                        'min_stock_level' => $minStockLevel,
+                        'weight' => $weight,
+                        'dimensions' => $dimensions,
+                        'tags' => $tags,
+                        'brand' => $brand,
+                        'status' => 'pending', // Re-approval needed after edit
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ], 'id = ? AND vendor_id = ?', [$productId, $vendor['id']]);
+                    
+                    if ($updated) {
+                        $success = 'Product updated successfully! Changes will be live after admin approval.';
+                        header('Location: ?page=vendor-products');
+                        exit();
+                    } else {
+                        $error = 'Failed to update product. Please try again.';
+                    }
+                }
+            }
+        }
+        
+        if ($action === 'delete_product') {
+            $productId = intval($_POST['product_id'] ?? 0);
+            
+            $deleted = $database->delete('products', 'id = ? AND vendor_id = ?', [$productId, $vendor['id']]);
+            
+            if ($deleted) {
+                $success = 'Product deleted successfully!';
+            } else {
+                $error = 'Failed to delete product.';
             }
         }
     }
@@ -156,11 +250,81 @@ if (isset($_GET['edit'])) {
 }
 ?>
 
-<!-- Modern Vendor Products Page -->
-<div class="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $pageTitle; ?> - <?php echo SITE_NAME; ?></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for vendor system */
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .sidebar-overlay {
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Ensure proper mobile behavior */
+        @media (max-width: 1024px) {
+            .vendor-sidebar {
+                position: fixed;
+                top: 64px;
+                bottom: 0;
+                left: 0;
+                z-index: 40;
+                width: 288px;
+                transform: translateX(-100%);
+            }
+            
+            .vendor-sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .vendor-content {
+                margin-left: 0;
+                padding-top: 64px;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .vendor-sidebar {
+                position: relative;
+                width: 288px;
+                transform: translateX(0) !important;
+            }
+            
+            .vendor-content {
+                margin-left: 288px;
+                padding-top: 0;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .mobile-header {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            .mobile-header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 50;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-red-50 min-h-screen">
     <!-- Mobile Header -->
-    <div class="lg:hidden fixed top-16 left-0 right-0 bg-white shadow-lg border-b px-4 py-4 z-30">
+    <div class="mobile-header bg-white shadow-lg border-b px-4 py-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
@@ -176,19 +340,28 @@ if (isset($_GET['edit'])) {
 
     <div class="flex">
         <!-- Modern Vendor Sidebar -->
-        <div id="vendor-sidebar" class="fixed top-16 bottom-0 left-0 z-20 w-72 bg-white shadow-2xl transform -translate-x-full transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-auto border-r border-gray-200">
+        <div id="vendor-sidebar" class="vendor-sidebar bg-white shadow-2xl border-r border-gray-200 sidebar-transition">
             
             <!-- Vendor Profile Header -->
             <div class="p-6 bg-gradient-to-r from-orange-500 to-red-500">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                            <i class="fas fa-store text-white text-xl"></i>
+                            <?php if ($vendor['shop_logo']): ?>
+                                <img src="<?php echo htmlspecialchars($vendor['shop_logo']); ?>" 
+                                     alt="Shop Logo" class="w-full h-full object-cover rounded-xl">
+                            <?php else: ?>
+                                <i class="fas fa-store text-white text-xl"></i>
+                            <?php endif; ?>
                         </div>
                         <div>
                             <h2 class="text-lg font-bold text-white"><?php echo htmlspecialchars($vendor['shop_name']); ?></h2>
                             <div class="flex items-center text-orange-100 text-sm">
-                                <i class="fas fa-check-circle mr-1"></i>Active Store
+                                <?php if ($_SESSION['status'] === 'active'): ?>
+                                    <i class="fas fa-check-circle mr-1"></i>Active Store
+                                <?php else: ?>
+                                    <i class="fas fa-clock mr-1"></i><?php echo ucfirst($_SESSION['status']); ?>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -211,7 +384,7 @@ if (isset($_GET['edit'])) {
                     <span class="font-medium">Overview</span>
                 </a>
                 
-                <a href="?page=vendor&section=products" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-white bg-gradient-to-r from-orange-500 to-red-500 shadow-lg">
+                <a href="?page=vendor-products" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-white bg-gradient-to-r from-orange-500 to-red-500 shadow-lg">
                     <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center mr-3">
                         <i class="fas fa-box text-sm"></i>
                     </div>
@@ -219,14 +392,14 @@ if (isset($_GET['edit'])) {
                     <div class="ml-auto w-2 h-2 bg-white rounded-full"></div>
                 </a>
                 
-                <a href="?page=vendor&section=orders" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                <a href="?page=vendor-orders" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
                     <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
                         <i class="fas fa-shopping-cart text-sm"></i>
                     </div>
                     <span class="font-medium">Orders</span>
                 </a>
                 
-                <a href="?page=vendor&section=analytics" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                <a href="?page=vendor-analytics" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
                     <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
                         <i class="fas fa-chart-line text-sm"></i>
                     </div>
@@ -238,7 +411,7 @@ if (isset($_GET['edit'])) {
                         <span class="text-xs uppercase text-gray-500 font-semibold tracking-wider">Account</span>
                     </div>
                     
-                    <a href="?page=vendor&section=profile" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
+                    <a href="?page=vendor-profile" class="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 text-gray-600 hover:text-orange-600 hover:bg-orange-50">
                         <div class="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mr-3 transition-colors">
                             <i class="fas fa-user text-sm"></i>
                         </div>
@@ -256,10 +429,10 @@ if (isset($_GET['edit'])) {
         </div>
 
         <!-- Sidebar Overlay for Mobile -->
-        <div id="vendor-overlay" class="fixed inset-0 bg-black/50 z-10 lg:hidden hidden backdrop-blur-sm" onclick="toggleVendorSidebar()"></div>
+        <div id="vendor-overlay" class="fixed inset-0 bg-black/50 z-30 lg:hidden sidebar-overlay" onclick="toggleVendorSidebar()"></div>
 
         <!-- Main Content Area -->
-        <div class="flex-1 lg:ml-0 pt-20 lg:pt-0">
+        <div class="vendor-content flex-1">
             <div class="p-6 lg:p-8 max-w-7xl mx-auto">
                 
                 <!-- Page Header -->
@@ -275,7 +448,7 @@ if (isset($_GET['edit'])) {
                             </div>
                         </div>
                         <div class="mt-4 lg:mt-0">
-                            <a href="?page=vendor&section=products&action=add" 
+                            <a href="?page=vendor-products&action=add" 
                                class="inline-flex items-center bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-2xl font-semibold hover:shadow-lg transition-all duration-200">
                                 <i class="fas fa-plus mr-2"></i>Add New Product
                             </a>
@@ -381,7 +554,7 @@ if (isset($_GET['edit'])) {
                                     <h2 class="text-2xl font-bold text-gray-900">
                                         <?php echo $editingProduct ? 'Edit Product' : 'Add New Product'; ?>
                                     </h2>
-                                    <p class="text-gray-600">Fill in the product details below</p>
+                                    <p class="text-gray-600">Fill in product details below</p>
                                 </div>
                             </div>
                             
@@ -579,7 +752,7 @@ if (isset($_GET['edit'])) {
                                         <i class="fas fa-save mr-2"></i>
                                         <?php echo $editingProduct ? 'Update Product' : 'Add Product'; ?>
                                     </button>
-                                    <a href="?page=vendor&section=products" 
+                                    <a href="?page=vendor-products" 
                                        class="flex-1 bg-gray-600 text-white py-4 px-8 rounded-2xl font-semibold text-lg text-center hover:bg-gray-700 transition-all duration-200 flex items-center justify-center">
                                         <i class="fas fa-times mr-2"></i>Cancel
                                     </a>
@@ -597,7 +770,7 @@ if (isset($_GET['edit'])) {
                                 </div>
                                 <h3 class="text-xl font-semibold text-gray-600 mb-2">No Products Yet</h3>
                                 <p class="text-gray-500 mb-6">Start building your catalog by adding your first product</p>
-                                <a href="?page=vendor&section=products&action=add" 
+                                <a href="?page=vendor-products&action=add" 
                                    class="inline-flex items-center bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-2xl font-semibold hover:shadow-lg transition-all duration-200">
                                     <i class="fas fa-plus mr-2"></i>Add Your First Product
                                 </a>
@@ -652,7 +825,7 @@ if (isset($_GET['edit'])) {
                                                 
                                                 <!-- Actions -->
                                                 <div class="flex space-x-2 pt-4">
-                                                    <a href="?page=vendor&section=products&edit=<?php echo $product['id']; ?>" 
+                                                    <a href="?page=vendor-products&edit=<?php echo $product['id']; ?>" 
                                                        class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-xl text-center text-sm font-semibold hover:bg-blue-700 transition-colors">
                                                         <i class="fas fa-edit mr-1"></i>Edit
                                                     </a>
@@ -672,61 +845,80 @@ if (isset($_GET['edit'])) {
             </div>
         </div>
     </div>
-</div>
 
-<script>
-function toggleVendorSidebar() {
-    const sidebar = document.getElementById('vendor-sidebar');
-    const overlay = document.getElementById('vendor-overlay');
-    
-    sidebar.classList.toggle('-translate-x-full');
-    overlay.classList.toggle('hidden');
-}
-
-function updateImagePreview(input) {
-    const preview = document.getElementById('image-preview');
-    preview.innerHTML = '';
-    
-    if (input.files && input.files.length > 0) {
-        preview.classList.remove('hidden');
+    <script>
+    function toggleVendorSidebar() {
+        const sidebar = document.getElementById('vendor-sidebar');
+        const overlay = document.getElementById('vendor-overlay');
         
-        Array.from(input.files).forEach((file, index) => {
-            if (index < 5) { // Max 5 images
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const div = document.createElement('div');
-                    div.className = 'relative';
-                    div.innerHTML = `
-                        <img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg border">
-                        <div class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs cursor-pointer" onclick="removeImage(${index})">×</div>
-                    `;
-                    preview.appendChild(div);
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('hidden');
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+        const sidebar = document.getElementById('vendor-sidebar');
+        const overlay = document.getElementById('vendor-overlay');
+        const toggleButton = event.target.closest('[onclick="toggleVendorSidebar()"]');
+        
+        if (!toggleButton && !sidebar.contains(event.target) && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+            overlay.classList.add('hidden');
+        }
+    });
+
+    // Initialize sidebar state based on screen size
+    function initializeSidebar() {
+        const sidebar = document.getElementById('vendor-sidebar');
+        const overlay = document.getElementById('vendor-overlay');
+        
+        if (window.innerWidth <= 1024) {
+            // Mobile: hide sidebar by default
+            sidebar.classList.remove('open');
+            overlay.classList.add('hidden');
+        } else {
+            // Desktop: always show sidebar
+            sidebar.classList.add('open');
+            overlay.classList.add('hidden');
+        }
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', initializeSidebar);
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initializeSidebar);
+
+    function updateImagePreview(input) {
+        const preview = document.getElementById('image-preview');
+        preview.innerHTML = '';
+        
+        if (input.files && input.files.length > 0) {
+            preview.classList.remove('hidden');
+            
+            Array.from(input.files).forEach((file, index) => {
+                if (index < 5) { // Max 5 images
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const div = document.createElement('div');
+                        div.className = 'relative';
+                        div.innerHTML = `
+                            <img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg border">
+                            <div class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs cursor-pointer" onclick="removeImage(${index})">×</div>
+                        `;
+                        preview.appendChild(div);
+                    }
+                    reader.readAsDataURL(file);
                 }
-                reader.readAsDataURL(file);
-            }
-        });
-    } else {
-        preview.classList.add('hidden');
+            });
+        } else {
+            preview.classList.add('hidden');
+        }
     }
-}
 
-function removeImage(index) {
-    // This is a simplified version - in a real app you'd need to properly handle file removal
-    console.log('Remove image at index:', index);
-}
-
-function deleteProduct(productId) {
-    if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-        // Submit delete request
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-            <input type="hidden" name="action" value="delete_product">
-            <input type="hidden" name="product_id" value="${productId}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
+    function removeImage(index) {
+        // This is a simplified version - in a real app you'd need to properly handle file removal
+        console.log('Remove image at index:', index);
     }
-}
-</script>
+
+    function deleteProduct(productId) {

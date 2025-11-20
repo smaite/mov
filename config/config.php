@@ -16,6 +16,11 @@ define('SITE_NAME', 'Sasto Hub');
 define('SITE_URL', 'http://localhost/mov/');
 define('SITE_EMAIL', 'info@sastohub.com');
 
+// Google OAuth Configuration
+define('GOOGLE_CLIENT_ID', '1071187412538-1iucic7t0h2pdrn4mkubohogg7dgk47e.apps.googleusercontent.com');
+define('GOOGLE_CLIENT_SECRET', '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');
+define('GOOGLE_REDIRECT_URI', SITE_URL . 'pages/auth/google_callback.php');
+
 // Directory paths
 define('ROOT_PATH', dirname(__DIR__));
 define('UPLOAD_PATH', ROOT_PATH . '/uploads');

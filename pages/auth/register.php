@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/cors.php';
+require_once __DIR__ . '/../../includes/google_oauth.php';
 
 // If already logged in, redirect
 if (isLoggedIn()) {
@@ -9,7 +10,6 @@ if (isLoggedIn()) {
 
 $error = '';
 $success = '';
-$userType = $_GET['type'] ?? 'customer'; // customer or vendor
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstName = sanitizeInput($_POST['first_name'] ?? '');
@@ -22,12 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $address = sanitizeInput($_POST['address'] ?? '');
     $city = sanitizeInput($_POST['city'] ?? '');
     $country = sanitizeInput($_POST['country'] ?? '');
-    $userType = $_POST['user_type'] ?? 'customer';
     $agree = isset($_POST['agree']);
-    
-    // Vendor specific fields
-    $shopName = sanitizeInput($_POST['shop_name'] ?? '');
-    $shopDescription = sanitizeInput($_POST['shop_description'] ?? '');
     
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
         $error = 'Invalid security token. Please try again.';
@@ -39,10 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Password must be at least ' . PASSWORD_MIN_LENGTH . ' characters long.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email address.';
-    } elseif ($userType === 'vendor' && empty($shopName)) {
-        $error = 'Shop name is required for vendor registration.';
     } elseif (!$agree) {
-        $error = 'You must agree to the terms and conditions.';
+        $error = 'You must agree to terms and conditions.';
     } else {
         global $database;
         
@@ -53,16 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         
         if ($existingUser) {
-            $error = 'Email or username already exists.';
+            $error = 'Email or username already exists. Please try different ones.';
         } else {
             // Hash password
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             
             try {
-                // Start transaction
-                $database->getConnection()->beginTransaction();
-                
-                // Insert user
+                // Insert user (customer only)
                 $userData = [
                     'username' => $username,
                     'email' => $email,
@@ -73,29 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'address' => $address,
                     'city' => $city,
                     'country' => $country,
-                    'user_type' => $userType,
-                    'status' => $userType === 'vendor' ? 'pending' : 'active'
+                    'user_type' => 'customer',
+                    'status' => 'active'
                 ];
                 
                 $userId = $database->insert('users', $userData);
                 
-                if ($userId && $userType === 'vendor') {
-                    // Insert vendor details
-                    $vendorData = [
-                        'user_id' => $userId,
-                        'shop_name' => $shopName,
-                        'shop_description' => $shopDescription
-                    ];
-                    
-                    $database->insert('vendors', $vendorData);
-                }
-                
-                // Commit transaction
-                $database->getConnection()->commit();
-                
-                if ($userType === 'vendor') {
-                    $success = 'Registration successful! Your vendor account is pending approval. You will be notified once approved.';
-                } else {
+                if ($userId) {
                     $success = 'Registration successful! You can now login with your credentials.';
                     
                     // Auto login for customers
@@ -104,17 +78,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['email'] = $email;
                     $_SESSION['first_name'] = $firstName;
                     $_SESSION['last_name'] = $lastName;
-                    $_SESSION['user_type'] = $userType;
-                    $_SESSION['status'] = 'active'; // Regular customers are active by default
+                    $_SESSION['user_type'] = 'customer';
+                    $_SESSION['status'] = 'active';
                     $_SESSION['profile_image'] = null;
                     
                     // Redirect after 2 seconds
-                    header("refresh:2;url=" . SITE_URL);
+                    echo "<script>setTimeout(function() { window.location.href = '" . SITE_URL . "'; }, 2000);</script>";
+                } else {
+                    $error = 'Registration failed. Please try again.';
                 }
                 
             } catch (Exception $e) {
-                // Rollback transaction
-                $database->getConnection()->rollback();
                 $error = 'Registration failed. Please try again.';
                 error_log("Registration error: " . $e->getMessage());
             }
@@ -146,29 +120,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 </head>
 <body class="bg-gray-50 min-h-screen py-8">
-    <div class="max-w-2xl mx-auto px-4">
+    <div class="max-w-md mx-auto px-4">
         <!-- Logo -->
         <div class="text-center mb-8">
             <a href="<?php echo SITE_URL; ?>" class="text-4xl font-bold text-primary">
                 <i class="fas fa-shopping-bag mr-2"></i>Sasto Hub
             </a>
-            <p class="text-gray-600 mt-2">Create your account</p>
-        </div>
-
-        <!-- Registration Type Tabs -->
-        <div class="bg-white rounded-lg shadow-md mb-6">
-            <div class="flex border-b">
-                <button onclick="switchTab('customer')" 
-                        class="flex-1 py-4 px-6 text-center font-semibold transition duration-200 <?php echo $userType === 'customer' ? 'text-primary border-b-2 border-primary' : 'text-gray-600 hover:text-primary'; ?>" 
-                        id="customer-tab">
-                    <i class="fas fa-user mr-2"></i>Customer
-                </button>
-                <button onclick="switchTab('vendor')" 
-                        class="flex-1 py-4 px-6 text-center font-semibold transition duration-200 <?php echo $userType === 'vendor' ? 'text-primary border-b-2 border-primary' : 'text-gray-600 hover:text-primary'; ?>" 
-                        id="vendor-tab">
-                    <i class="fas fa-store mr-2"></i>Vendor
-                </button>
-            </div>
+            <p class="text-gray-600 mt-2">Create your customer account</p>
         </div>
 
         <!-- Registration Form -->
@@ -187,7 +145,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <form method="POST" action="" id="registration-form">
                 <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                <input type="hidden" name="user_type" value="<?php echo $userType; ?>" id="user_type_input">
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
@@ -262,34 +219,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               placeholder="Enter your full address"><?php echo htmlspecialchars($address ?? ''); ?></textarea>
                 </div>
 
-                <!-- Vendor specific fields -->
-                <div id="vendor-fields" class="<?php echo $userType === 'vendor' ? '' : 'hidden'; ?>">
-                    <div class="border-t border-gray-200 pt-6 mb-4">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Vendor Information</h3>
-                        
-                        <div class="mb-4">
-                            <label for="shop_name" class="block text-gray-700 text-sm font-bold mb-2">Shop Name *</label>
-                            <input type="text" id="shop_name" name="shop_name"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                   placeholder="Enter your shop name"
-                                   value="<?php echo htmlspecialchars($shopName ?? ''); ?>">
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="shop_description" class="block text-gray-700 text-sm font-bold mb-2">Shop Description</label>
-                            <textarea id="shop_description" name="shop_description" rows="3"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                      placeholder="Describe your shop and products"><?php echo htmlspecialchars($shopDescription ?? ''); ?></textarea>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="mb-6">
                     <label class="flex items-center">
                         <input type="checkbox" name="agree" required
                                class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
                         <span class="ml-2 text-sm text-gray-700">
-                            I agree to the <a href="#" class="text-primary hover:text-opacity-80">Terms and Conditions</a> 
+                            I agree to <a href="#" class="text-primary hover:text-opacity-80">Terms and Conditions</a> 
                             and <a href="#" class="text-primary hover:text-opacity-80">Privacy Policy</a>
                         </span>
                     </label>
@@ -301,47 +236,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </form>
 
+            <!-- Divider -->
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-white text-gray-500">Or register with</span>
+                </div>
+            </div>
+
+            <!-- Google Sign-Up Button -->
+            <?php if (defined('GOOGLE_CLIENT_ID') && GOOGLE_CLIENT_ID !== 'your-google-client-id-here'): ?>
+                <div data-state="closed">
+                    <button class="inline-flex items-center justify-center relative shrink-0 can-focus select-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none disabled:drop-shadow-none font-base-bold border-0.5 relative overflow-hidden transition duration-100 backface-hidden h-11 rounded-[0.6rem] px-5 min-w-[6rem] active:scale-[0.985] whitespace-nowrap !text-base w-full gap-2 Button_secondary__x7x_y" type="button" data-testid="signup-with-google" onclick="handleGoogleSignUp()">
+                    <img alt="Google logo" loading="lazy" width="16" height="16" decoding="async" data-nimg="1" src="<?php echo SITE_URL; ?>assets/images/google.svg" style="color: transparent;" class="mr-3">
+                    Sign up with Google
+                </div>
+            <?php else: ?>
+                <div class="w-full flex items-center justify-center bg-gray-100 border border-gray-300 text-gray-500 font-medium py-3 px-4 rounded-lg cursor-not-allowed">
+                    <img alt="Google logo" loading="lazy" width="16" height="16" decoding="async" src="<?php echo SITE_URL; ?>assets/images/google.svg" style="color: transparent;" class="mr-3">
+                    Google Sign-Up (Not Configured)
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-2">
+                    Google OAuth needs to be configured. See <a href="GOOGLE_OAUTH_SETUP.md" class="text-primary">setup guide</a>.
+                </p>
+            <?php endif; ?>
+
             <div class="mt-6 text-center">
                 <p class="text-gray-600">
-                    Already have an account? 
+                    Already have an account?
                     <a href="?page=login" class="text-primary hover:text-opacity-80 font-semibold">Sign in</a>
+                </p>
+                <p class="text-gray-600 mt-2">
+                    Want to become a vendor?
+                    <a href="?page=vendor-register" class="text-primary hover:text-opacity-80 font-semibold">Apply here</a>
                 </p>
             </div>
         </div>
     </div>
 
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-        function switchTab(type) {
-            // Update active tab
-            document.getElementById('customer-tab').className = 
-                type === 'customer' 
-                ? 'flex-1 py-4 px-6 text-center font-semibold transition duration-200 text-primary border-b-2 border-primary'
-                : 'flex-1 py-4 px-6 text-center font-semibold transition duration-200 text-gray-600 hover:text-primary';
+        function handleGoogleSignUp(response) {
+            if (response.credential) {
+                // Create a form and submit the credential to the callback
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '<?php echo SITE_URL; ?>?page=google_callback&type=customer';
                 
-            document.getElementById('vendor-tab').className = 
-                type === 'vendor' 
-                ? 'flex-1 py-4 px-6 text-center font-semibold transition duration-200 text-primary border-b-2 border-primary'
-                : 'flex-1 py-4 px-6 text-center font-semibold transition duration-200 text-gray-600 hover:text-primary';
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'credential';
+                input.value = response.credential;
                 
-            // Update hidden input
-            document.getElementById('user_type_input').value = type;
-            
-            // Show/hide vendor fields
-            const vendorFields = document.getElementById('vendor-fields');
-            const shopNameInput = document.getElementById('shop_name');
-            
-            if (type === 'vendor') {
-                vendorFields.classList.remove('hidden');
-                shopNameInput.required = true;
-            } else {
-                vendorFields.classList.add('hidden');
-                shopNameInput.required = false;
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
             }
-            
-            // Update URL
-            const url = new URL(window.location);
-            url.searchParams.set('type', type);
-            window.history.replaceState({}, '', url);
+        }
+
+        function initGoogleSignUp() {
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: "<?php echo GOOGLE_CLIENT_ID; ?>",
+                    callback: handleGoogleSignUp,
+                    auto_select: false,
+                    context: "signup"
+                });
+
+                // Render button
+                google.accounts.id.renderButton(
+                    document.getElementById("google-signup-btn"),
+                    {
+                        theme: "outline",
+                        size: "large",
+                        text: "signup_with",
+                        shape: "rectangular",
+                        logo_alignment: "left",
+                        width: document.getElementById("google-signup-btn").offsetWidth
+                    }
+                );
+            }
         }
 
         // Password strength indicator
@@ -377,6 +353,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 alert('Password must be at least <?php echo PASSWORD_MIN_LENGTH; ?> characters long!');
                 return false;
             }
+        });
+
+        // Initialize Google Sign-Up on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if (defined('GOOGLE_CLIENT_ID') && GOOGLE_CLIENT_ID !== 'your-google-client-id-here'): ?>
+                initGoogleSignUp();
+            <?php endif; ?>
         });
     </script>
 </body>

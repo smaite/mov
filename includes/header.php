@@ -15,6 +15,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?php echo ASSETS_PATH; ?>/css/style.css">
     <link rel="stylesheet" href="<?php echo ASSETS_PATH; ?>/css/modern-ui.css">
+    <link rel="stylesheet" href="<?php echo ASSETS_PATH; ?>/css/theme.css">
     
     <!-- Tailwind Config -->
     <script>

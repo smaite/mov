@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:cookie_jar/cookie_jar.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../app/constants.dart';
 
 class ApiClient {
@@ -16,18 +16,24 @@ class ApiClient {
 
   void initialize() {
     _cookieJar = CookieJar();
+    
+    // Build headers - exclude User-Agent on web platform (browser restriction)
+    final headers = <String, dynamic>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    // Only add User-Agent header on non-web platforms
+    if (!kIsWeb) {
+      headers['User-Agent'] = '${AppConstants.appName}/${AppConstants.appVersion}';
+    }
+    
     _dio = Dio(BaseOptions(
       baseUrl: AppConstants.apiBaseUrl,
       connectTimeout: Duration(milliseconds: AppConstants.connectTimeout),
       receiveTimeout: Duration(milliseconds: AppConstants.networkTimeout),
       sendTimeout: Duration(milliseconds: AppConstants.networkTimeout),
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
-        'User-Agent': '${AppConstants.appName}/${AppConstants.appVersion}',
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
+      headers: headers,
       validateStatus: (status) {
         return status != null && status < 500;
       },
@@ -251,7 +257,8 @@ class ApiClient {
         case DioExceptionType.badCertificate:
           return ApiException('Invalid SSL certificate');
         case DioExceptionType.unknown:
-          if (error.error is SocketException) {
+          // Check for network errors (SocketException only available on non-web)
+          if (!kIsWeb && error.error.toString().contains('SocketException')) {
             return ApiException(AppConstants.networkErrorMessage);
           }
           return ApiException(AppConstants.generalErrorMessage);

@@ -9,9 +9,11 @@ class ApiEndpoints {
   
   // Products
   static const String home = AppConstants.productEndpoint;
-  static const String categoryProducts = '/?page=products&category=';
-  static const String search = '/?page=search&q=';
-  static const String productDetails = '/?page=product&id=';
+  static const String categoryProducts = '/api/index.php?action=products&category=';
+  static const String search = '/api/index.php?action=search&q=';
+  static const String productDetails = '/api/index.php?action=product&id=';
+  static const String allProducts = '/api/index.php?action=products';
+  static const String categories = '/api/index.php?action=categories';
   
   // Cart
   static const String cart = AppConstants.addToCartEndpoint;

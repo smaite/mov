@@ -67,8 +67,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($existingUser) {
                 $error = 'An account with this email already exists';
             } else {
+                // Generate username from email or create unique one
+                $username = explode('@', $email)[0];
+                $baseUsername = $username;
+                $counter = 1;
+                
+                // Check if username exists and make it unique
+                while ($database->fetchOne("SELECT id FROM users WHERE username = ?", [$username])) {
+                    $username = $baseUsername . $counter;
+                    $counter++;
+                }
+                
                 // Create user account
                 $userId = $database->insert('users', [
+                    'username' => $username,
                     'first_name' => $firstName,
                     'last_name' => $lastName,
                     'email' => $email,

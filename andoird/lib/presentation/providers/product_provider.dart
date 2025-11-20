@@ -97,7 +97,7 @@ class ProductProvider extends ChangeNotifier {
       _setStatus(ProductStatus.loading);
       _clearError();
 
-      final response = await _apiClient.get('/pages/products/index.php');
+      final response = await _apiClient.get(ApiEndpoints.allProducts);
 
       if (response.data != null && response.data!['products'] is List) {
         _products = (response.data!['products'] as List)

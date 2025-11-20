@@ -4,12 +4,14 @@ import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/auth/register_screen.dart';
 import '../presentation/screens/main_app_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
+import '../presentation/screens/home/modern_home_screen.dart';
 import '../presentation/screens/search/search_screen.dart';
 import '../presentation/screens/cart/cart_screen.dart';
 import '../presentation/screens/profile/profile_screen.dart';
 import '../presentation/screens/home/product_detail_screen.dart';
 import '../presentation/screens/cart/checkout_screen.dart';
 import '../presentation/screens/profile/orders_screen.dart';
+import '../../data/models/product.dart';
 
 class AppRouter {
   static const String welcome = '/welcome';
@@ -68,9 +70,9 @@ class AppRouter {
         );
 
       case productDetail:
-        final productId = settings.arguments as String?;
+        final product = settings.arguments as Product;
         return MaterialPageRoute(
-          builder: (_) => ProductDetailScreen(productId: productId ?? ''),
+          builder: (_) => ProductDetailScreen(product: product),
           settings: settings,
         );
 

@@ -25,6 +25,10 @@ $validPages = [
     'profile' => 'pages/user/profile.php',
     'wishlist' => 'pages/user/wishlist.php',
     'vendor' => 'pages/vendor/dashboard.php',
+    'vendor-products' => 'pages/vendor/products.php',
+    'vendor-orders' => 'pages/vendor/orders.php',
+    'vendor-analytics' => 'pages/vendor/analytics.php',
+    'vendor-profile' => 'pages/vendor/profile.php',
     'admin' => 'pages/admin/dashboard.php'
 ];
 

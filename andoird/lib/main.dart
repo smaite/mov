@@ -8,6 +8,7 @@ import 'core/storage/secure_storage.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/product_provider.dart';
 import 'presentation/providers/cart_provider.dart';
+import 'presentation/screens/home/modern_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,7 +54,7 @@ class SastoHubApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       onGenerateRoute: AppRouter.generateRoute,
-      initialRoute: AppRouter.welcome,
+      initialRoute: AppRouter.home,
       debugShowCheckedModeBanner: false,
     );
   }

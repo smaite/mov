@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/cors.php';
+require_once __DIR__ . '/../../includes/google_oauth.php';
 
 // If already logged in, redirect
 if (isLoggedIn()) {
@@ -29,63 +30,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         global $database;
         
-        // First, check if user exists at all
-        $userCheck = $database->fetchOne(
-            "SELECT email, status, user_type FROM users WHERE email = ?", 
+        // Get user by email
+        $user = $database->fetchOne(
+            "SELECT * FROM users WHERE email = ?", 
             [$email]
         );
         
-        if (!$userCheck) {
-            $error = "No account found with email: " . htmlspecialchars($email);
-        } elseif ($userCheck['status'] !== 'active') {
-            $error = "Account status: " . htmlspecialchars($userCheck['status']) . ". Only active accounts can login.";
+        if (!$user) {
+            $error = 'Invalid email or password.';
+        } elseif ($user['status'] !== 'active') {
+            $error = 'Your account is ' . htmlspecialchars($user['status']) . '. Only active accounts can login.';
+        } elseif (!password_verify($password, $user['password'])) {
+            $error = 'Invalid email or password.';
         } else {
-            // Get full user data for active user
-            $user = $database->fetchOne(
-                "SELECT * FROM users WHERE email = ? AND status = 'active'", 
-                [$email]
+            // Password verified - set session variables
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['email'] = $user['email'];
+            $_SESSION['first_name'] = $user['first_name'];
+            $_SESSION['last_name'] = $user['last_name'];
+            $_SESSION['user_type'] = $user['user_type'];
+            $_SESSION['status'] = $user['status'];
+            $_SESSION['profile_image'] = $user['profile_image'];
+            
+            // Update last login
+            $database->update('users', 
+                ['last_login' => date('Y-m-d H:i:s')], 
+                'id = ?', 
+                [$user['id']]
             );
             
-            if ($user) {
-                // Debug password verification
-                $passwordVerified = password_verify($password, $user['password']);
-                
-                if ($passwordVerified) {
-                    // Set session variables
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['email'] = $user['email'];
-                    $_SESSION['first_name'] = $user['first_name'];
-                    $_SESSION['last_name'] = $user['last_name'];
-                    $_SESSION['user_type'] = $user['user_type'];
-                    $_SESSION['status'] = $user['status'];
-                    $_SESSION['profile_image'] = $user['profile_image'];
-                    
-                    // Set remember me cookie if requested
-                    if ($remember) {
-                        $cookieValue = base64_encode($user['id'] . ':' . hash('sha256', $user['password']));
-                        setcookie('remember_token', $cookieValue, time() + (86400 * 30), '/'); // 30 days
-                    }
-                    
-                    // Redirect based on user type
-                    if ($user['user_type'] === 'admin') {
-                        redirectTo('?page=admin');
-                    } elseif ($user['user_type'] === 'vendor') {
-                        redirectTo('?page=vendor');
-                    } else {
-                        $redirect = $_GET['redirect'] ?? '';
-                        redirectTo($redirect ?: '');
-                    }
-                } else {
-                    // Password verification failed - check if it's a demo account
-                    if (in_array($email, ['customer@test.com', 'vendor@test.com', 'vendor2@test.com', 'jane@test.com', 'newvendor@test.com']) && $password === 'password') {
-                        $error = "Demo account found but password hash doesn't match. Hash in DB: " . substr($user['password'], 0, 30) . "...";
-                    } else {
-                        $error = 'Password verification failed for email: ' . htmlspecialchars($email);
-                    }
-                }
+            // Set remember me cookie if requested
+            if ($remember) {
+                $cookieValue = base64_encode($user['id'] . ':' . hash('sha256', $user['password']));
+                setcookie('remember_token', $cookieValue, time() + (86400 * 30), '/'); // 30 days
+            }
+            
+            // Redirect based on user type
+            if ($user['user_type'] === 'admin') {
+                redirectTo('?page=admin');
+            } elseif ($user['user_type'] === 'vendor') {
+                redirectTo('?page=vendor');
             } else {
-                $error = 'Error retrieving user data.';
+                $redirect = $_GET['redirect'] ?? '';
+                redirectTo($redirect ?: '');
             }
         }
     }
@@ -181,9 +169,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </form>
 
+            <!-- Divider -->
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-white text-gray-500">Or continue with</span>
+                </div>
+            </div>
+
+            <!-- Google Sign-In Button -->
+            <?php if (defined('GOOGLE_CLIENT_ID') && GOOGLE_CLIENT_ID !== 'your-google-client-id-here'): ?>
+                <div data-state="closed">
+                    <button class="inline-flex items-center justify-center relative shrink-0 can-focus select-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none disabled:drop-shadow-none font-base-bold border-0.5 relative overflow-hidden transition duration-100 backface-hidden h-11 rounded-[0.6rem] px-5 min-w-[6rem] active:scale-[0.985] whitespace-nowrap !text-base w-full gap-2 Button_secondary__x7x_y" type="button" data-testid="login-with-google" onclick="handleGoogleSignIn()">
+                        <img alt="Google logo" loading="lazy" width="16" height="16" decoding="async" data-nimg="1" src="<?php echo SITE_URL; ?>assets/images/google.svg" style="color: transparent;">
+                        Continue with Google
+                    </button>
+                </div>
+            <?php else: ?>
+                <div class="w-full flex items-center justify-center bg-gray-100 border border-gray-300 text-gray-500 font-medium py-3 px-4 rounded-lg cursor-not-allowed">
+                    <img alt="Google logo" loading="lazy" width="16" height="16" decoding="async" src="<?php echo SITE_URL; ?>assets/images/google.svg" style="color: transparent;" class="mr-3">
+                    Google Sign-In (Not Configured)
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-2">
+                    Google OAuth needs to be configured. See <a href="GOOGLE_OAUTH_SETUP.md" class="text-primary">setup guide</a>.
+                </p>
+            <?php endif; ?>
+
             <div class="mt-6 text-center">
                 <p class="text-gray-600">
-                    Don't have an account? 
+                    Don't have an account?
                     <a href="?page=register" class="text-primary hover:text-opacity-80 font-semibold">Sign up</a>
                 </p>
             </div>
@@ -201,6 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div> -->
     </div>
 
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         function togglePassword() {
             const passwordInput = document.getElementById('password');
@@ -214,6 +231,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 passwordInput.type = 'password';
                 passwordToggle.classList.remove('fa-eye-slash');
                 passwordToggle.classList.add('fa-eye');
+            }
+        }
+
+        function handleGoogleSignIn(response) {
+            if (response.credential) {
+                // Create a form and submit the credential to the callback
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '<?php echo SITE_URL; ?>?page=google_callback';
+                
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'credential';
+                input.value = response.credential;
+                
+                form.appendChild(input);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function initGoogleSignIn() {
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: "<?php echo GOOGLE_CLIENT_ID; ?>",
+                    callback: handleGoogleSignIn,
+                    auto_select: false,
+                    context: "signin"
+                });
+
+                // Render the button
+                google.accounts.id.renderButton(
+                    document.getElementById("google-signin-btn"),
+                    {
+                        theme: "outline",
+                        size: "large",
+                        text: "signin_with",
+                        shape: "rectangular",
+                        logo_alignment: "left",
+                        width: document.getElementById("google-signin-btn").offsetWidth
+                    }
+                );
             }
         }
 
@@ -232,6 +291,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 document.getElementById('email').value = 'vendor@test.com';
                 document.getElementById('password').value = 'password';
             }
+            
+            // Initialize Google Sign-In
+            initGoogleSignIn();
         });
     </script>
 </body>

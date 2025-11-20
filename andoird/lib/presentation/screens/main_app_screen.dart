@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
-import 'home/home_screen.dart';
+import '../../app/theme.dart';
+import 'home/modern_home_screen.dart';
 import 'search/search_screen.dart';
 import 'cart/cart_screen.dart';
 import 'profile/profile_screen.dart';
@@ -18,7 +19,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
   late PageController _pageController;
 
   final List<Widget> _screens = [
-    const HomeScreen(),
+    const ModernHomeScreen(),
     const SearchScreen(),
     const CartScreen(),
     const ProfileScreen(),
@@ -56,6 +57,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: context.theme.scaffoldBackgroundColor,
       body: PageView(
         controller: _pageController,
         onPageChanged: _onPageChanged,
@@ -67,34 +69,34 @@ class _MainAppScreenState extends State<MainAppScreen> {
             type: BottomNavigationBarType.fixed,
             currentIndex: _selectedIndex,
             onTap: _onItemTapped,
-            selectedItemColor: Theme.of(context).primaryColor,
-            unselectedItemColor: Colors.grey,
-            backgroundColor: Colors.white,
+            selectedItemColor: context.primaryColor,
+            unselectedItemColor: context.colorScheme.onSurface.withOpacity(0.6),
+            backgroundColor: context.colorScheme.surface,
             elevation: 8,
             items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                activeIcon: Icon(Icons.home),
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.home_outlined),
+                activeIcon: const Icon(Icons.home),
                 label: 'Home',
               ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.search),
-                activeIcon: Icon(Icons.search),
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.search_outlined),
+                activeIcon: const Icon(Icons.search),
                 label: 'Search',
               ),
               BottomNavigationBarItem(
                 icon: Stack(
                   children: [
-                    const Icon(Icons.shopping_cart),
+                    const Icon(Icons.shopping_cart_outlined),
                     if (cartProvider.cartCount > 0)
                       Positioned(
                         right: -6,
                         top: -6,
                         child: Container(
-                          padding: const EdgeInsets.all(2),
+                          padding: EdgeInsets.all(context.spacing1),
                           decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
+                            color: context.errorColor,
+                            borderRadius: BorderRadius.circular(context.radiusLg),
                           ),
                           constraints: const BoxConstraints(
                             minWidth: 16,
@@ -102,9 +104,8 @@ class _MainAppScreenState extends State<MainAppScreen> {
                           ),
                           child: Text(
                             '${cartProvider.cartCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
+                            style: context.textTheme.labelSmall?.copyWith(
+                              color: context.colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
                             ),
                             textAlign: TextAlign.center,
@@ -121,10 +122,10 @@ class _MainAppScreenState extends State<MainAppScreen> {
                         right: -6,
                         top: -6,
                         child: Container(
-                          padding: const EdgeInsets.all(2),
+                          padding: EdgeInsets.all(context.spacing1),
                           decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
+                            color: context.errorColor,
+                            borderRadius: BorderRadius.circular(context.radiusLg),
                           ),
                           constraints: const BoxConstraints(
                             minWidth: 16,
@@ -132,9 +133,8 @@ class _MainAppScreenState extends State<MainAppScreen> {
                           ),
                           child: Text(
                             '${cartProvider.cartCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
+                            style: context.textTheme.labelSmall?.copyWith(
+                              color: context.colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
                             ),
                             textAlign: TextAlign.center,
@@ -145,9 +145,9 @@ class _MainAppScreenState extends State<MainAppScreen> {
                 ),
                 label: 'Cart',
               ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                activeIcon: Icon(Icons.person),
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.person_outline),
+                activeIcon: const Icon(Icons.person),
                 label: 'Profile',
               ),
             ],

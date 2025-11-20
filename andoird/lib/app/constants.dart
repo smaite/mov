@@ -13,7 +13,7 @@ class AppConstants {
   // API Endpoints
   static const String loginEndpoint = '/pages/auth/login.php';
   static const String registerEndpoint = '/pages/auth/register.php';
-  static const String productEndpoint = '/';
+  static const String productEndpoint = '/api/index.php?action=home';
   static const String addToCartEndpoint = '/ajax/cart.php?action=add';
   static const String cartCountEndpoint = '/ajax/cart.php?action=count';
   static const String wishlistToggleEndpoint = '/ajax/wishlist.php?action=toggle';
